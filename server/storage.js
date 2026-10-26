@@ -3,9 +3,10 @@ const crypto = require('crypto');
 const multer = require('multer');
 const { put, del, head } = require('@vercel/blob');
 
-// Files live in Vercel Blob (BLOB_READ_WRITE_TOKEN is added automatically when you
-// create a Blob store in Vercel → Storage). Note files are uploaded straight from the
-// browser so they can be larger than Vercel's 4.5 MB request limit.
+// Files live in Vercel Blob. Connecting a Blob store in Vercel → Storage adds either
+// BLOB_STORE_ID (+ automatic OIDC auth on Vercel) or a classic BLOB_READ_WRITE_TOKEN;
+// the SDK accepts both. Note files are uploaded straight from the browser so they can
+// be larger than Vercel's 4.5 MB request limit.
 
 const NOTE_TYPES = [
   'application/pdf',
@@ -20,7 +21,7 @@ const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif
 const NOTE_MAX_BYTES = 25 * 1024 * 1024;
 
 function blobConfigured() {
-  return !!process.env.BLOB_READ_WRITE_TOKEN;
+  return !!(process.env.BLOB_STORE_ID || process.env.BLOB_READ_WRITE_TOKEN);
 }
 
 // Only accept file URLs that point at a Vercel Blob store.
@@ -64,7 +65,7 @@ const avatarUpload = multer({
 
 async function saveAvatar(userId, file) {
   if (!blobConfigured()) {
-    const err = new Error('File storage is not set up (BLOB_READ_WRITE_TOKEN missing)');
+    const err = new Error('File storage is not set up (connect a Vercel Blob store)');
     err.status = 503;
     throw err;
   }

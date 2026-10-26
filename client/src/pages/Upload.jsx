@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { upload } from '@vercel/blob/client';
+import { uploadPresigned } from '@vercel/blob/client';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { useSubjects } from '../subjects';
@@ -27,9 +27,11 @@ export default function Upload() {
       let fileFields = {};
       if (file) {
         // Send the file straight to storage, then save the note with its address.
+        // Unique name per upload; the server signs exactly this path inside the user's folder.
         const safeName = file.name.replace(/[^\w.-]+/g, '_').slice(-80) || 'notes';
+        const unique = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
         setProgress(0);
-        const blob = await upload(`notes/${user.id}/${safeName}`, file, {
+        const blob = await uploadPresigned(`notes/${user.id}/${unique}-${safeName}`, file, {
           access: 'public',
           handleUploadUrl: '/api/notes/upload',
           onUploadProgress: ({ percentage }) => setProgress(Math.round(percentage)),

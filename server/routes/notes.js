@@ -1,5 +1,6 @@
 const express = require('express');
-const { handleUpload } = require('@vercel/blob/client');
+const { issueSignedToken } = require('@vercel/blob');
+const { handleUploadPresigned } = require('@vercel/blob/client');
 const { db, SUBJECTS } = require('../db');
 const { requireAuth, cleanUrl, str, numericId } = require('../helpers');
 const { NOTE_TYPES, NOTE_MAX_BYTES, blobConfigured, isBlobUrl, blobInfo, removeBlob } = require('../storage');
@@ -77,19 +78,25 @@ router.get('/notes/:id', requireAuth, async (req, res) => {
   res.json(serialize(n, req.user));
 });
 
-// Step 1 of an upload: the browser asks for a short-lived token, then sends the file
-// straight to Vercel Blob (so files can be bigger than Vercel's 4.5 MB request limit).
+// Step 1 of an upload: the browser asks for a presigned URL for one exact pathname,
+// then sends the file straight to Vercel Blob (so files can be bigger than Vercel's
+// 4.5 MB request limit). The browser picks a unique name inside the user's own folder.
 router.post('/notes/upload', async (req, res) => {
-  if (!blobConfigured()) return res.status(503).json({ error: 'File storage is not set up yet (BLOB_READ_WRITE_TOKEN missing)' });
-  const result = await handleUpload({
+  if (!blobConfigured()) return res.status(503).json({ error: 'File storage is not set up yet (connect a Vercel Blob store)' });
+  const result = await handleUploadPresigned({
     body: req.body,
     request: req,
-    onBeforeGenerateToken: async (pathname) => {
+    // Only used to verify upload-completed callbacks, which this app doesn't request.
+    webhookPublicKey: process.env.BLOB_WEBHOOK_PUBLIC_KEY || 'unused',
+    getSignedToken: async (pathname) => {
       if (!req.user) throw Object.assign(new Error('Please log in'), { status: 401 });
-      if (!pathname.startsWith(`notes/${req.user.id}/`)) throw Object.assign(new Error('Invalid upload path'), { status: 400 });
-      return { allowedContentTypes: NOTE_TYPES, maximumSizeInBytes: NOTE_MAX_BYTES, addRandomSuffix: true };
+      if (!new RegExp(`^notes/${req.user.id}/[\\w.-]{1,160}$`).test(pathname)) {
+        throw Object.assign(new Error('Invalid upload path'), { status: 400 });
+      }
+      const limits = { allowedContentTypes: NOTE_TYPES, maximumSizeInBytes: NOTE_MAX_BYTES };
+      const token = await issueSignedToken({ pathname, operations: ['put'], ...limits });
+      return { token, urlOptions: limits };
     },
-    onUploadCompleted: async () => {},
   });
   res.json(result);
 });
