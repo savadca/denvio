@@ -10,11 +10,11 @@ function publicUser(u) {
 }
 
 // Loads the session user fresh on every request so blocks take effect immediately.
-function loadUser(req, res, next) {
-  if (req.session.userId) {
-    const u = db.prepare('SELECT * FROM users WHERE id = ?').get(req.session.userId);
+async function loadUser(req, res, next) {
+  if (req.session?.userId) {
+    const u = await db.prepare('SELECT * FROM users WHERE id = ?').get(req.session.userId);
     if (!u || u.status === 'blocked') {
-      req.session.destroy(() => {});
+      req.session = null;
     } else {
       req.user = u;
     }
@@ -48,4 +48,10 @@ function str(value, max = 500) {
   return String(value ?? '').trim().slice(0, max);
 }
 
-module.exports = { publicUser, loadUser, requireAuth, requireAdmin, cleanUrl, str };
+// router.param guard: Postgres rejects non-numeric ids, so answer 404 instead of a 500.
+function numericId(req, res, next, id) {
+  if (/^\d{1,9}$/.test(id)) return next();
+  res.status(404).json({ error: 'Not found' });
+}
+
+module.exports = { publicUser, loadUser, requireAuth, requireAdmin, cleanUrl, str, numericId };

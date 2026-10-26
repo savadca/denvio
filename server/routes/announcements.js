@@ -1,18 +1,19 @@
 const express = require('express');
 const { db } = require('../db');
-const { requireAuth, requireAdmin, cleanUrl, str } = require('../helpers');
+const { requireAuth, requireAdmin, cleanUrl, str, numericId } = require('../helpers');
 
 const router = express.Router();
+router.param('id', numericId);
 const TYPES = ['info', 'success', 'warning', 'urgent', 'event'];
 
-const LIVE = "active = 1 AND (expires_at IS NULL OR expires_at = '' OR expires_at >= date('now'))";
+const LIVE = "active = 1 AND (expires_at IS NULL OR expires_at >= current_date)";
 
-router.get('/announcements', requireAuth, (req, res) => {
-  res.json(db.prepare(`SELECT * FROM announcements WHERE ${LIVE} ORDER BY id DESC LIMIT 10`).all());
+router.get('/announcements', requireAuth, async (req, res) => {
+  res.json(await db.prepare(`SELECT * FROM announcements WHERE ${LIVE} ORDER BY id DESC LIMIT 10`).all());
 });
 
-router.get('/admin/announcements', requireAdmin, (req, res) => {
-  res.json(db.prepare(`SELECT *, (${LIVE}) AS live FROM announcements ORDER BY id DESC LIMIT 100`).all());
+router.get('/admin/announcements', requireAdmin, async (req, res) => {
+  res.json(await db.prepare(`SELECT *, (${LIVE}) AS live FROM announcements ORDER BY id DESC LIMIT 100`).all());
 });
 
 function fields(body) {
@@ -28,25 +29,25 @@ function fields(body) {
   };
 }
 
-router.post('/admin/announcements', requireAdmin, (req, res) => {
+router.post('/admin/announcements', requireAdmin, async (req, res) => {
   const f = fields(req.body);
   if (f.error) return res.status(400).json(f);
-  const { lastInsertRowid } = db.prepare(`
+  const { lastInsertRowid } = await db.prepare(`
     INSERT INTO announcements (title, body, type, emoji, link_url, link_label, expires_at, created_by)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(f.title, f.body, f.type, f.emoji, f.link_url, f.link_label, f.expires_at, req.user.id);
   res.status(201).json({ id: Number(lastInsertRowid) });
 });
 
-router.put('/admin/announcements/:id', requireAdmin, (req, res) => {
-  const a = db.prepare('SELECT * FROM announcements WHERE id = ?').get(req.params.id);
+router.put('/admin/announcements/:id', requireAdmin, async (req, res) => {
+  const a = await db.prepare('SELECT * FROM announcements WHERE id = ?').get(req.params.id);
   if (!a) return res.status(404).json({ error: 'Announcement not found' });
-  db.prepare('UPDATE announcements SET active = ? WHERE id = ?').run(req.body.active ? 1 : 0, a.id);
+  await db.prepare('UPDATE announcements SET active = ? WHERE id = ?').run(req.body.active ? 1 : 0, a.id);
   res.json({ ok: true });
 });
 
-router.delete('/admin/announcements/:id', requireAdmin, (req, res) => {
-  db.prepare('DELETE FROM announcements WHERE id = ?').run(req.params.id);
+router.delete('/admin/announcements/:id', requireAdmin, async (req, res) => {
+  await db.prepare('DELETE FROM announcements WHERE id = ?').run(req.params.id);
   res.json({ ok: true });
 });
 

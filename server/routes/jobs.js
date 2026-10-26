@@ -1,8 +1,9 @@
 const express = require('express');
 const { db } = require('../db');
-const { requireAuth, requireAdmin, cleanUrl, str } = require('../helpers');
+const { requireAuth, requireAdmin, cleanUrl, str, numericId } = require('../helpers');
 
 const router = express.Router();
+router.param('id', numericId);
 
 // Job classifications for dental graduates; `keywords` drive live searches and auto-tagging.
 const CLASSIFICATIONS = [
@@ -73,7 +74,7 @@ async function liveJobs({ classification, type, q, location }) {
   }
 }
 
-router.get('/jobs/meta', requireAuth, (req, res) => {
+router.get('/jobs/meta', requireAuth, async (req, res) => {
   res.json({
     classifications: CLASSIFICATIONS.map(({ id, label, keywords }) => ({ id, label, keyword: keywords[0] })),
     types: JOB_TYPES,
@@ -92,28 +93,28 @@ router.get('/jobs', requireAuth, async (req, res) => {
   const params = [];
   if (filters.classification) { where.push('classification = ?'); params.push(filters.classification); }
   if (filters.type) { where.push('job_type = ?'); params.push(filters.type); }
-  if (filters.location) { where.push('location LIKE ?'); params.push(`%${filters.location}%`); }
-  if (filters.q) { where.push('(title LIKE ? OR company LIKE ? OR description LIKE ?)'); params.push(...Array(3).fill(`%${filters.q}%`)); }
-  const board = db.prepare(`SELECT * FROM jobs WHERE ${where.join(' AND ')} ORDER BY created_at DESC, id DESC LIMIT 100`)
-    .all(...params).map((j) => ({ ...j, source: 'board' }));
+  if (filters.location) { where.push('location ILIKE ?'); params.push(`%${filters.location}%`); }
+  if (filters.q) { where.push('(title ILIKE ? OR company ILIKE ? OR description ILIKE ?)'); params.push(...Array(3).fill(`%${filters.q}%`)); }
+  const board = (await db.prepare(`SELECT * FROM jobs WHERE ${where.join(' AND ')} ORDER BY created_at DESC, id DESC LIMIT 100`)
+    .all(...params)).map((j) => ({ ...j, source: 'board' }));
   const live = req.query.source === 'board' ? { enabled: !!ADZUNA_ID, items: [] } : await liveJobs(filters);
   res.json({ board: req.query.source === 'live' ? [] : board, live: live.items, live_enabled: live.enabled, live_error: live.error || null });
 });
 
 // ---- Admin job board ----
 
-router.get('/admin/jobs', requireAdmin, (req, res) => {
-  res.json(db.prepare('SELECT * FROM jobs ORDER BY created_at DESC, id DESC LIMIT 200').all());
+router.get('/admin/jobs', requireAdmin, async (req, res) => {
+  res.json(await db.prepare('SELECT * FROM jobs ORDER BY created_at DESC, id DESC LIMIT 200').all());
 });
 
-router.post('/admin/jobs', requireAdmin, (req, res) => {
+router.post('/admin/jobs', requireAdmin, async (req, res) => {
   const title = str(req.body.title, 120);
   const company = str(req.body.company, 120);
   if (!title || !company) return res.status(400).json({ error: 'Title and clinic/company are required' });
   if (!byId[req.body.classification]) return res.status(400).json({ error: 'Choose a classification' });
   const applyUrl = cleanUrl(req.body.apply_url);
   if (req.body.apply_url && !applyUrl) return res.status(400).json({ error: 'Apply link must start with http:// or https://' });
-  const { lastInsertRowid } = db.prepare(`
+  const { lastInsertRowid } = await db.prepare(`
     INSERT INTO jobs (title, company, location, classification, job_type, salary, description, apply_url, created_by)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
@@ -124,13 +125,13 @@ router.post('/admin/jobs', requireAdmin, (req, res) => {
   res.status(201).json({ id: Number(lastInsertRowid) });
 });
 
-router.put('/admin/jobs/:id', requireAdmin, (req, res) => {
-  db.prepare('UPDATE jobs SET active = ? WHERE id = ?').run(req.body.active ? 1 : 0, req.params.id);
+router.put('/admin/jobs/:id', requireAdmin, async (req, res) => {
+  await db.prepare('UPDATE jobs SET active = ? WHERE id = ?').run(req.body.active ? 1 : 0, req.params.id);
   res.json({ ok: true });
 });
 
-router.delete('/admin/jobs/:id', requireAdmin, (req, res) => {
-  db.prepare('DELETE FROM jobs WHERE id = ?').run(req.params.id);
+router.delete('/admin/jobs/:id', requireAdmin, async (req, res) => {
+  await db.prepare('DELETE FROM jobs WHERE id = ?').run(req.params.id);
   res.json({ ok: true });
 });
 

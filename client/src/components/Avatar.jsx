@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 export default function Avatar({ user, size = 32, ring = false, story = false, link = false }) {
   const letter = (user?.full_name || user?.username || '?').trim()[0]?.toUpperCase();
   const inner = user?.avatar
-    ? <img src={`/uploads/avatars/${user.avatar}`} alt="" />
+    ? <img src={/^https?:\/\//.test(user.avatar) ? user.avatar : `/uploads/avatars/${user.avatar}`} alt="" />
     : <span style={{ fontSize: size * 0.42 }}>{letter}</span>;
   const el = (
     <span

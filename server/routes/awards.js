@@ -1,9 +1,10 @@
 const express = require('express');
 const { db } = require('../db');
-const { requireAuth, requireAdmin, str } = require('../helpers');
+const { requireAuth, requireAdmin, str, numericId } = require('../helpers');
 const { TIERS } = require('../coins');
 
 const router = express.Router();
+router.param('id', numericId);
 
 const AWARD_SELECT = `
   SELECT a.id, a.tier, a.points, a.reason, a.note_id, a.post_id, a.seen, a.created_at,
@@ -25,13 +26,13 @@ const shape = (a) => ({
   awarded_by: a.awarded_by,
 });
 
-router.get('/leaderboard', requireAuth, (req, res) => {
-  const since = req.query.period === 'month' ? "AND a.created_at >= datetime('now', 'start of month')" : '';
-  const rows = db.prepare(`
+router.get('/leaderboard', requireAuth, async (req, res) => {
+  const since = req.query.period === 'month' ? "AND a.created_at >= date_trunc('month', now())" : '';
+  const rows = await db.prepare(`
     SELECT u.id, u.username, u.full_name, u.avatar, u.college, u.year,
       SUM(a.points) AS points,
-      SUM(a.tier = 'diamond') AS diamond, SUM(a.tier = 'gold') AS gold,
-      SUM(a.tier = 'silver') AS silver, SUM(a.tier = 'bronze') AS bronze
+      COUNT(*) FILTER (WHERE a.tier = 'diamond') AS diamond, COUNT(*) FILTER (WHERE a.tier = 'gold') AS gold,
+      COUNT(*) FILTER (WHERE a.tier = 'silver') AS silver, COUNT(*) FILTER (WHERE a.tier = 'bronze') AS bronze
     FROM awards a JOIN users u ON u.id = a.user_id
     WHERE u.status = 'active' ${since}
     GROUP BY u.id ORDER BY points DESC, MAX(a.created_at) ASC LIMIT 50
@@ -43,28 +44,28 @@ router.get('/leaderboard', requireAuth, (req, res) => {
   })));
 });
 
-router.get('/users/:username/awards', requireAuth, (req, res) => {
-  const rows = db.prepare(`${AWARD_SELECT} WHERE u.username = ? ORDER BY a.created_at DESC, a.id DESC LIMIT 100`)
+router.get('/users/:username/awards', requireAuth, async (req, res) => {
+  const rows = await db.prepare(`${AWARD_SELECT} WHERE u.username = ? ORDER BY a.created_at DESC, a.id DESC LIMIT 100`)
     .all(req.params.username);
   res.json(rows.map(shape));
 });
 
-router.get('/me/awards/unseen', requireAuth, (req, res) => {
-  res.json(db.prepare(`${AWARD_SELECT} WHERE a.user_id = ? AND a.seen = 0 ORDER BY a.id`).all(req.user.id).map(shape));
+router.get('/me/awards/unseen', requireAuth, async (req, res) => {
+  res.json((await db.prepare(`${AWARD_SELECT} WHERE a.user_id = ? AND a.seen = 0 ORDER BY a.id`).all(req.user.id)).map(shape));
 });
 
-router.post('/me/awards/seen', requireAuth, (req, res) => {
-  db.prepare('UPDATE awards SET seen = 1 WHERE user_id = ?').run(req.user.id);
+router.post('/me/awards/seen', requireAuth, async (req, res) => {
+  await db.prepare('UPDATE awards SET seen = 1 WHERE user_id = ?').run(req.user.id);
   res.json({ ok: true });
 });
 
 // ---- Admin ----
 
-router.get('/admin/awards', requireAdmin, (req, res) => {
-  res.json(db.prepare(`${AWARD_SELECT} ORDER BY a.created_at DESC, a.id DESC LIMIT 100`).all().map(shape));
+router.get('/admin/awards', requireAdmin, async (req, res) => {
+  res.json((await db.prepare(`${AWARD_SELECT} ORDER BY a.created_at DESC, a.id DESC LIMIT 100`).all()).map(shape));
 });
 
-router.post('/admin/awards', requireAdmin, (req, res) => {
+router.post('/admin/awards', requireAdmin, async (req, res) => {
   const tier = String(req.body.tier || '');
   if (!(tier in TIERS)) return res.status(400).json({ error: 'Pick a coin: diamond, gold, silver or bronze' });
 
@@ -73,26 +74,26 @@ router.post('/admin/awards', requireAdmin, (req, res) => {
   let userId = req.body.user_id ? Number(req.body.user_id) : null;
   // When awarding for a piece of content, the coin always goes to its author.
   if (noteId) {
-    const n = db.prepare('SELECT user_id FROM notes WHERE id = ?').get(noteId);
+    const n = await db.prepare('SELECT user_id FROM notes WHERE id = ?').get(noteId);
     if (!n) return res.status(404).json({ error: 'Note not found' });
     userId = n.user_id;
   } else if (postId) {
-    const p = db.prepare('SELECT user_id FROM posts WHERE id = ?').get(postId);
+    const p = await db.prepare('SELECT user_id FROM posts WHERE id = ?').get(postId);
     if (!p) return res.status(404).json({ error: 'Post not found' });
     userId = p.user_id;
   }
-  const target = userId && db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+  const target = userId && await db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
   if (!target) return res.status(404).json({ error: 'User not found' });
   if (target.id === req.user.id) return res.status(400).json({ error: 'You cannot award coins to yourself' });
 
-  const { lastInsertRowid } = db.prepare(`
+  const { lastInsertRowid } = await db.prepare(`
     INSERT INTO awards (user_id, tier, points, reason, note_id, post_id, awarded_by) VALUES (?, ?, ?, ?, ?, ?, ?)
   `).run(target.id, tier, TIERS[tier], str(req.body.reason, 200), noteId, postId, req.user.id);
   res.status(201).json({ id: Number(lastInsertRowid), points: TIERS[tier] });
 });
 
-router.delete('/admin/awards/:id', requireAdmin, (req, res) => {
-  db.prepare('DELETE FROM awards WHERE id = ?').run(req.params.id);
+router.delete('/admin/awards/:id', requireAdmin, async (req, res) => {
+  await db.prepare('DELETE FROM awards WHERE id = ?').run(req.params.id);
   res.json({ ok: true });
 });
 

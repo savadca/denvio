@@ -1,18 +1,19 @@
-const path = require('path');
 const express = require('express');
+const { handleUpload } = require('@vercel/blob/client');
 const { db, SUBJECTS } = require('../db');
-const { requireAuth, cleanUrl, str } = require('../helpers');
-const { noteUpload, NOTES_DIR, removeFile } = require('../uploads');
+const { requireAuth, cleanUrl, str, numericId } = require('../helpers');
+const { NOTE_TYPES, NOTE_MAX_BYTES, blobConfigured, isBlobUrl, blobInfo, removeBlob } = require('../storage');
 const { countTiers } = require('../coins');
 
 const router = express.Router();
+router.param('id', numericId);
 
 const NOTE_SELECT = `
   SELECT n.*, u.username, u.avatar AS user_avatar, u.full_name AS user_full_name,
     (SELECT COUNT(*) FROM likes l WHERE l.note_id = n.id) AS like_count,
     EXISTS(SELECT 1 FROM likes l WHERE l.note_id = n.id AND l.user_id = ?) AS liked,
     EXISTS(SELECT 1 FROM saves s WHERE s.note_id = n.id AND s.user_id = ?) AS saved,
-    (SELECT GROUP_CONCAT(a.tier) FROM awards a WHERE a.note_id = n.id) AS award_tiers
+    (SELECT string_agg(a.tier, ',') FROM awards a WHERE a.note_id = n.id) AS award_tiers
   FROM notes n JOIN users u ON u.id = n.user_id
 `;
 
@@ -37,12 +38,12 @@ function canView(n, viewer) {
   return n.status === 'approved' || viewer.role === 'admin' || viewer.id === n.user_id;
 }
 
-router.get('/notes', requireAuth, (req, res) => {
+router.get('/notes', requireAuth, async (req, res) => {
   const me = req.user;
   const where = [];
   const params = [me.id, me.id];
   if (req.query.user) {
-    const owner = db.prepare('SELECT id FROM users WHERE username = ?').get(String(req.query.user));
+    const owner = await db.prepare('SELECT id FROM users WHERE username = ?').get(String(req.query.user));
     if (!owner) return res.json([]);
     where.push('n.user_id = ?');
     params.push(owner.id);
@@ -61,45 +62,70 @@ router.get('/notes', requireAuth, (req, res) => {
     params.push(String(req.query.subject));
   }
   if (req.query.q) {
-    where.push('(n.title LIKE ? OR n.description LIKE ? OR u.username LIKE ?)');
+    where.push('(n.title ILIKE ? OR n.description ILIKE ? OR u.username ILIKE ?)');
     const q = `%${String(req.query.q)}%`;
     params.push(q, q, q);
   }
-  const rows = db.prepare(`${NOTE_SELECT} WHERE ${where.join(' AND ')} ORDER BY n.created_at DESC, n.id DESC LIMIT 100`)
+  const rows = await db.prepare(`${NOTE_SELECT} WHERE ${where.join(' AND ')} ORDER BY n.created_at DESC, n.id DESC LIMIT 100`)
     .all(...params);
   res.json(rows.map((n) => serialize(n, me)));
 });
 
-router.get('/notes/:id', requireAuth, (req, res) => {
-  const n = db.prepare(`${NOTE_SELECT} WHERE n.id = ?`).get(req.user.id, req.user.id, req.params.id);
+router.get('/notes/:id', requireAuth, async (req, res) => {
+  const n = await db.prepare(`${NOTE_SELECT} WHERE n.id = ?`).get(req.user.id, req.user.id, req.params.id);
   if (!n || !canView(n, req.user)) return res.status(404).json({ error: 'Note not found' });
   res.json(serialize(n, req.user));
 });
 
-router.post('/notes', requireAuth, noteUpload.single('file'), (req, res) => {
+// Step 1 of an upload: the browser asks for a short-lived token, then sends the file
+// straight to Vercel Blob (so files can be bigger than Vercel's 4.5 MB request limit).
+router.post('/notes/upload', async (req, res) => {
+  if (!blobConfigured()) return res.status(503).json({ error: 'File storage is not set up yet (BLOB_READ_WRITE_TOKEN missing)' });
+  const result = await handleUpload({
+    body: req.body,
+    request: req,
+    onBeforeGenerateToken: async (pathname) => {
+      if (!req.user) throw Object.assign(new Error('Please log in'), { status: 401 });
+      if (!pathname.startsWith(`notes/${req.user.id}/`)) throw Object.assign(new Error('Invalid upload path'), { status: 400 });
+      return { allowedContentTypes: NOTE_TYPES, maximumSizeInBytes: NOTE_MAX_BYTES, addRandomSuffix: true };
+    },
+    onUploadCompleted: async () => {},
+  });
+  res.json(result);
+});
+
+// Step 2: save the note, pointing at the uploaded file (if any).
+router.post('/notes', requireAuth, async (req, res) => {
   const title = str(req.body.title, 120);
   const subject = str(req.body.subject, 80);
   const video_url = cleanUrl(req.body.video_url);
   const audio_url = cleanUrl(req.body.audio_url);
-  const fail = (msg) => {
-    if (req.file) removeFile(NOTES_DIR, req.file.filename);
-    res.status(400).json({ error: msg });
-  };
-  if (!title) return fail('Title is required');
-  if (!SUBJECTS.includes(subject)) return fail('Choose a subject');
-  if (!req.file && !video_url && !audio_url) return fail('Attach a file or add a video/audio link');
-  if (req.body.video_url && !video_url) return fail('Video link must start with http:// or https://');
-  if (req.body.audio_url && !audio_url) return fail('Audio link must start with http:// or https://');
+  const fileUrl = String(req.body.file_url || '');
+  if (!title) return res.status(400).json({ error: 'Title is required' });
+  if (!SUBJECTS.includes(subject)) return res.status(400).json({ error: 'Choose a subject' });
+  if (!fileUrl && !video_url && !audio_url) return res.status(400).json({ error: 'Attach a file or add a video/audio link' });
+  if (req.body.video_url && !video_url) return res.status(400).json({ error: 'Video link must start with http:// or https://' });
+  if (req.body.audio_url && !audio_url) return res.status(400).json({ error: 'Audio link must start with http:// or https://' });
+
+  let file = null;
+  if (fileUrl) {
+    // Only accept files this user uploaded to our Blob store, and trust Blob's own metadata.
+    const info = isBlobUrl(fileUrl) && new URL(fileUrl).pathname.startsWith(`/notes/${req.user.id}/`) ? await blobInfo(fileUrl) : null;
+    if (!info || !NOTE_TYPES.includes(info.contentType) || info.size > NOTE_MAX_BYTES) {
+      return res.status(400).json({ error: 'The uploaded file could not be verified. Please upload it again.' });
+    }
+    file = { url: info.url, mime: info.contentType, name: str(req.body.file_name, 200) || info.pathname.split('/').pop() };
+  }
 
   // Admin uploads skip the review queue.
   const isAdmin = req.user.role === 'admin';
-  const { lastInsertRowid } = db.prepare(`
+  const { lastInsertRowid } = await db.prepare(`
     INSERT INTO notes (user_id, title, subject, description, file_path, file_name, file_mime,
       video_url, audio_url, video_enabled, audio_enabled, status, reviewed_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     req.user.id, title, subject, str(req.body.description, 2000),
-    req.file?.filename || '', req.file ? str(req.file.originalname, 200) : '', req.file?.mimetype || '',
+    file?.url || '', file?.name || '', file?.mime || '',
     video_url, audio_url, isAdmin && video_url ? 1 : 0, isAdmin && audio_url ? 1 : 0,
     isAdmin ? 'approved' : 'pending', isAdmin ? new Date().toISOString() : null,
   );
@@ -109,33 +135,32 @@ router.post('/notes', requireAuth, noteUpload.single('file'), (req, res) => {
 router.post('/notes/:id/like', requireAuth, (req, res) => toggle('likes', req, res));
 router.post('/notes/:id/save', requireAuth, (req, res) => toggle('saves', req, res));
 
-function toggle(table, req, res) {
-  const n = db.prepare('SELECT * FROM notes WHERE id = ?').get(req.params.id);
+async function toggle(table, req, res) {
+  const n = await db.prepare('SELECT * FROM notes WHERE id = ?').get(req.params.id);
   if (!n || n.status !== 'approved') return res.status(404).json({ error: 'Note not found' });
-  const exists = db.prepare(`SELECT 1 FROM ${table} WHERE user_id = ? AND note_id = ?`).get(req.user.id, n.id);
-  if (exists) db.prepare(`DELETE FROM ${table} WHERE user_id = ? AND note_id = ?`).run(req.user.id, n.id);
-  else db.prepare(`INSERT INTO ${table} (user_id, note_id) VALUES (?, ?)`).run(req.user.id, n.id);
-  const { c } = db.prepare(`SELECT COUNT(*) AS c FROM ${table} WHERE note_id = ?`).get(n.id);
+  const exists = await db.prepare(`SELECT 1 FROM ${table} WHERE user_id = ? AND note_id = ?`).get(req.user.id, n.id);
+  if (exists) await db.prepare(`DELETE FROM ${table} WHERE user_id = ? AND note_id = ?`).run(req.user.id, n.id);
+  else await db.prepare(`INSERT INTO ${table} (user_id, note_id) VALUES (?, ?)`).run(req.user.id, n.id);
+  const { c } = await db.prepare(`SELECT COUNT(*) AS c FROM ${table} WHERE note_id = ?`).get(n.id);
   res.json({ active: !exists, count: c });
 }
 
-router.get('/notes/:id/file', requireAuth, (req, res) => {
-  const n = db.prepare('SELECT * FROM notes WHERE id = ?').get(req.params.id);
+router.get('/notes/:id/file', requireAuth, async (req, res) => {
+  const n = await db.prepare('SELECT * FROM notes WHERE id = ?').get(req.params.id);
   if (!n || !n.file_path || !canView(n, req.user)) return res.status(404).json({ error: 'File not found' });
-  const filePath = path.join(NOTES_DIR, path.basename(n.file_path));
   if (req.query.download === '1') {
-    db.prepare('UPDATE notes SET downloads = downloads + 1 WHERE id = ?').run(n.id);
-    return res.download(filePath, n.file_name || path.basename(n.file_path));
+    await db.prepare('UPDATE notes SET downloads = downloads + 1 WHERE id = ?').run(n.id);
+    return res.redirect(302, `${n.file_path}?download=1`);
   }
-  res.type(n.file_mime).sendFile(filePath);
+  res.redirect(302, n.file_path);
 });
 
-router.delete('/notes/:id', requireAuth, (req, res) => {
-  const n = db.prepare('SELECT * FROM notes WHERE id = ?').get(req.params.id);
+router.delete('/notes/:id', requireAuth, async (req, res) => {
+  const n = await db.prepare('SELECT * FROM notes WHERE id = ?').get(req.params.id);
   if (!n) return res.status(404).json({ error: 'Note not found' });
   if (n.user_id !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: 'Not allowed' });
-  removeFile(NOTES_DIR, n.file_path);
-  db.prepare('DELETE FROM notes WHERE id = ?').run(n.id);
+  await db.prepare('DELETE FROM notes WHERE id = ?').run(n.id);
+  await removeBlob(n.file_path);
   res.json({ ok: true });
 });
 

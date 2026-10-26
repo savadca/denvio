@@ -6,8 +6,8 @@ function emptyCoins() {
   return { diamond: 0, gold: 0, silver: 0, bronze: 0 };
 }
 
-function coinSummary(userId) {
-  const rows = db.prepare('SELECT tier, COUNT(*) AS c, SUM(points) AS p FROM awards WHERE user_id = ? GROUP BY tier').all(userId);
+async function coinSummary(userId) {
+  const rows = await db.prepare('SELECT tier, COUNT(*) AS c, SUM(points) AS p FROM awards WHERE user_id = ? GROUP BY tier').all(userId);
   const coins = emptyCoins();
   let points = 0;
   for (const r of rows) {
@@ -17,7 +17,7 @@ function coinSummary(userId) {
   return { coins, points };
 }
 
-// "gold,gold,bronze" (from GROUP_CONCAT) -> { gold: 2, bronze: 1, ... }
+// "gold,gold,bronze" (from string_agg) -> { gold: 2, bronze: 1, ... }
 function countTiers(list) {
   const coins = emptyCoins();
   for (const t of String(list || '').split(',')) if (t in coins) coins[t]++;

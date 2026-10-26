@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { upload } from '@vercel/blob/client';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { useSubjects } from '../subjects';
@@ -15,23 +16,34 @@ export default function Upload() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(null);
+  const [progress, setProgress] = useState(null);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   const submit = async (e) => {
     e.preventDefault();
     setError('');
     setBusy(true);
-    const fd = new FormData();
-    Object.entries(form).forEach(([k, v]) => fd.append(k, v));
-    if (file) fd.append('file', file);
     try {
-      setDone(await api.post('/notes', fd));
+      let fileFields = {};
+      if (file) {
+        // Send the file straight to storage, then save the note with its address.
+        const safeName = file.name.replace(/[^\w.-]+/g, '_').slice(-80) || 'notes';
+        setProgress(0);
+        const blob = await upload(`notes/${user.id}/${safeName}`, file, {
+          access: 'public',
+          handleUploadUrl: '/api/notes/upload',
+          onUploadProgress: ({ percentage }) => setProgress(Math.round(percentage)),
+        });
+        fileFields = { file_url: blob.url, file_name: file.name };
+      }
+      setDone(await api.post('/notes', { ...form, ...fileFields }));
       setForm(empty);
       setFile(null);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Upload failed');
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   };
 
@@ -88,7 +100,7 @@ export default function Upload() {
         </fieldset>
 
         {error && <p className="form-error" role="alert">{error}</p>}
-        <button className="btn btn-primary btn-block" disabled={busy}>{busy ? 'Uploading…' : 'Submit for review'}</button>
+        <button className="btn btn-primary btn-block" disabled={busy}>{busy ? (progress !== null && progress < 100 ? `Uploading… ${progress}%` : 'Saving…') : 'Submit for review'}</button>
       </form>
     </div>
   );
