@@ -5,6 +5,7 @@ import Avatar from './Avatar';
 import Celebration from './Celebration';
 import AnnouncementBar from './AnnouncementBar';
 import Modal from './Modal';
+import ErrorBoundary from './ErrorBoundary';
 import {
   HomeIcon, TestIcon, BookIcon, ChatIcon, ShieldIcon, LogoutIcon, SettingsIcon, ToothIcon, TrophyIcon,
   NewsIcon, BriefcaseIcon, MenuIcon,
@@ -71,7 +72,7 @@ export default function Layout({ children }) {
 
       <main className="main">
         <AnnouncementBar />
-        <div className="page" key={pathname}>{children}</div>
+        <div className="page" key={pathname}><ErrorBoundary resetKey={pathname}>{children}</ErrorBoundary></div>
       </main>
       <Celebration />
 

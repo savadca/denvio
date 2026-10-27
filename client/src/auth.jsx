@@ -7,10 +7,26 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(undefined); // undefined = still checking
 
   useEffect(() => {
-    api.get('/auth/me').then((d) => setUser(d.user)).catch(() => setUser(null));
+    // The first request after the site has been idle can be slow or fail while the
+    // server and database wake up, so retry a few times before showing the login page.
+    let cancelled = false;
+    const load = async (attempt = 0) => {
+      try {
+        const d = await api.get('/auth/me');
+        if (!cancelled) setUser(d.user);
+      } catch (e) {
+        if (cancelled) return;
+        if (e.status !== 401 && attempt < 3) setTimeout(() => load(attempt + 1), 1000 * (attempt + 1));
+        else setUser(null);
+      }
+    };
+    load();
     const onUnauth = () => setUser(null);
     window.addEventListener('denvio:unauth', onUnauth);
-    return () => window.removeEventListener('denvio:unauth', onUnauth);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('denvio:unauth', onUnauth);
+    };
   }, []);
 
   const value = {

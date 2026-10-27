@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './auth';
 import Layout, { Logo } from './components/Layout';
@@ -16,15 +16,29 @@ import { Community, Thread } from './pages/Community';
 import Admin from './pages/admin/Admin';
 import TestEditor from './pages/admin/TestEditor';
 
+// Shown while we check the login; after a few seconds explain the wait (cold start).
+function Splash() {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setSlow(true), 3500);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div className="splash">
+      <Logo className="logo-lg" />
+      <span className="spinner" aria-label="Loading" />
+      <p className={`splash-note ${slow ? 'show' : ''}`}>Waking up the server… the first load can take a few seconds.</p>
+    </div>
+  );
+}
+
 export default function App() {
   const { user } = useAuth();
   const { pathname } = useLocation();
 
   useEffect(() => window.scrollTo(0, 0), [pathname]);
 
-  if (user === undefined) {
-    return <div className="splash"><Logo className="logo-lg" /></div>;
-  }
+  if (user === undefined) return <Splash />;
 
   if (!user) {
     return (

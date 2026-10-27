@@ -1223,3 +1223,16 @@ body:has(.ann-bell) .fab { bottom: 92px; }
 .subject-badge { font-size: 20px; }
 .subject-badge-lg { font-size: 30px; }
 @media (max-width: 767px) { .subject-badge-lg { font-size: 26px; } }
+
+/* ===== Loading splash & crash screen ===== */
+.splash { flex-direction: column; gap: 18px; display: flex; align-items: center; justify-content: center; min-height: 100dvh; padding: 24px; text-align: center; }
+.splash .logo-lg { margin: 0; }
+.spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--elevated); border-top-color: #d62976; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.splash-note { color: var(--muted); max-width: 280px; opacity: 0; transition: opacity .4s; margin: 0; }
+.splash-note.show { opacity: 1; }
+.crash { min-height: 60vh; display: grid; place-items: center; padding: 24px 16px; }
+.crash-card { max-width: 380px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 28px 22px; border-radius: 22px; border: 1px solid var(--border-soft); background: var(--surface); }
+.crash-emoji { font-size: 44px; }
+.crash-details { width: 100%; text-align: left; font-size: 12px; color: var(--muted); }
+.crash-details code { display: block; margin-top: 6px; padding: 8px; border-radius: 8px; background: var(--elevated); word-break: break-word; white-space: pre-wrap; }
