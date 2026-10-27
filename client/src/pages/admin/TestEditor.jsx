@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, useApi } from '../../api';
 import { useToast } from '../../auth';
-import { useSubjects } from '../../subjects';
+import { TopicOptions } from '../../subjects';
 import { TrashIcon, CheckIcon } from '../../components/Icons';
 
 const blankQ = { question: '', opt_a: '', opt_b: '', opt_c: '', opt_d: '', correct: '', explanation: '' };
@@ -11,7 +11,6 @@ export default function TestEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
-  const subjects = useSubjects();
   const { data: test, error, reload } = useApi(`/admin/tests/${id}`);
   const [meta, setMeta] = useState(null);
   const [q, setQ] = useState(blankQ);
@@ -59,7 +58,7 @@ export default function TestEditor() {
         <div className="form-grid">
           <label>Title<input value={meta.title} onChange={setM('title')} required /></label>
           <label>Subject
-            <select value={meta.subject} onChange={setM('subject')}>{subjects.map((s) => <option key={s}>{s}</option>)}</select>
+            <select value={meta.subject} onChange={setM('subject')}><TopicOptions /></select>
           </label>
           <label>Duration (min)<input type="number" min={1} max={240} value={meta.duration_min} onChange={setM('duration_min')} /></label>
         </div>

@@ -1,6 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { db, SUBJECTS } = require('../db');
+const { db, SUBJECTS, EXAMS } = require('../db');
 const { publicUser, requireAuth, str } = require('../helpers');
 const { avatarUpload, saveAvatar, removeBlob } = require('../storage');
 const { coinSummary } = require('../coins');
@@ -9,6 +9,7 @@ const router = express.Router();
 const USERNAME_RE = /^[a-z0-9._]{3,24}$/i;
 
 router.get('/subjects', (req, res) => res.json(SUBJECTS));
+router.get('/exams', (req, res) => res.json(EXAMS));
 
 router.get('/auth/me', async (req, res) => {
   if (!req.user) return res.json({ user: null });

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api, useApi } from '../../api';
 import { useAuth, useToast } from '../../auth';
-import { useSubjects } from '../../subjects';
+import { TopicOptions } from '../../subjects';
 import Avatar, { UserLine } from '../../components/Avatar';
 import MediaViewer from '../../components/MediaViewer';
 import { NotePreview } from '../../components/NoteCard';
@@ -284,7 +284,6 @@ function Reports({ onChange }) {
 
 function Tests() {
   const toast = useToast();
-  const subjects = useSubjects();
   const { data, reload } = useApi('/admin/tests');
   const [form, setForm] = useState({ title: '', subject: '', duration_min: 15, description: '' });
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
@@ -318,7 +317,7 @@ function Tests() {
           <label>Subject
             <select value={form.subject} onChange={set('subject')} required>
               <option value="">Select…</option>
-              {subjects.map((s) => <option key={s}>{s}</option>)}
+              <TopicOptions />
             </select>
           </label>
           <label>Duration (minutes)<input type="number" min={1} max={240} value={form.duration_min} onChange={set('duration_min')} /></label>

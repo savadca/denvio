@@ -97,5 +97,18 @@ const SUBJECT_EMOJI = {
   'General Medicine': '🩺', 'General Surgery': '🏥', 'Oral Pathology': '🧫', 'Oral Medicine & Radiology': '☢️',
   'Oral & Maxillofacial Surgery': '😷', Prosthodontics: '😁', 'Conservative Dentistry & Endodontics': '🛠️',
   Orthodontics: '😬', Periodontics: '🌿', Pedodontics: '👶', 'Public Health Dentistry': '🌍',
+  'NEET MDS': '🎯', 'INI-CET (AIIMS)': '🏛️', 'ORE – UK': '🇬🇧', 'ADC – Australia': '🇦🇺',
+  'NDEB – Canada': '🇨🇦', 'INBDE – USA': '🇺🇸', 'Gulf – DHA / MOH': '🇦🇪',
+};
+
+// One-line blurbs for the exam-prep cards.
+export const EXAM_INFO = {
+  'NEET MDS': 'MDS entrance · India',
+  'INI-CET (AIIMS)': 'AIIMS, PGIMER, JIPMER · India',
+  'ORE – UK': 'Overseas Registration Exam',
+  'ADC – Australia': 'Australian Dental Council',
+  'NDEB – Canada': 'AFK · ACJ · NDECC',
+  'INBDE – USA': 'Integrated National Board',
+  'Gulf – DHA / MOH': 'Dubai · UAE · Saudi · Qatar',
 };
 export const subjectEmoji = (subject) => SUBJECT_EMOJI[subject] || '📘';

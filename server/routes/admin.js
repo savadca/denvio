@@ -1,5 +1,5 @@
 const express = require('express');
-const { db, SUBJECTS } = require('../db');
+const { db, isTopic } = require('../db');
 const { requireAdmin, publicUser, cleanUrl, str, numericId } = require('../helpers');
 const { removeBlob } = require('../storage');
 
@@ -152,7 +152,7 @@ function testFields(body) {
   const title = str(body.title, 120);
   const subject = str(body.subject, 80);
   if (!title) return { error: 'Title is required' };
-  if (!SUBJECTS.includes(subject)) return { error: 'Choose a subject' };
+  if (!isTopic(subject)) return { error: 'Choose a subject or exam' };
   const duration = Math.min(Math.max(parseInt(body.duration_min, 10) || 15, 1), 240);
   return { title, subject, description: str(body.description, 500), duration };
 }

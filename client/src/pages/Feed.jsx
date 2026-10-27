@@ -6,7 +6,7 @@ import { useSubjects } from '../subjects';
 import NoteCard from '../components/NoteCard';
 import Avatar from '../components/Avatar';
 import Coin, { LevelBadge } from '../components/Coin';
-import { SearchIcon, PlusIcon, TestIcon, ChatIcon, TrophyIcon, ShieldIcon, GridIcon, ClockIcon, ToothIcon, FlagIcon } from '../components/Icons';
+import { SearchIcon, PlusIcon, TestIcon, ChatIcon, TrophyIcon, ShieldIcon, GridIcon, ClockIcon, ToothIcon, FlagIcon, BriefcaseIcon } from '../components/Icons';
 import { TIERS, levelFor, useCountUp } from '../coins';
 import { timeAgo, subjectHue, greeting } from '../utils';
 import { NewsCard } from './News';
@@ -47,8 +47,8 @@ function Hero({ user, profile, stats }) {
   const actions = [
     { to: '/notes?upload=1', label: 'Upload', icon: PlusIcon },
     { to: '/tests', label: 'Mock test', icon: TestIcon },
-    { to: '/community', label: 'Ask', icon: ChatIcon },
-    isAdmin ? { to: '/admin', label: 'Review', icon: ShieldIcon } : { to: '/leaderboard', label: 'Ranks', icon: TrophyIcon },
+    { to: '/jobs', label: 'Jobs', icon: BriefcaseIcon },
+    isAdmin ? { to: '/admin', label: 'Review', icon: ShieldIcon } : { to: '/community', label: 'Ask', icon: ChatIcon },
   ];
 
   return (

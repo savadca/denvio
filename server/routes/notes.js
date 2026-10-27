@@ -1,7 +1,7 @@
 const express = require('express');
 const { issueSignedToken } = require('@vercel/blob');
 const { handleUploadPresigned } = require('@vercel/blob/client');
-const { db, SUBJECTS } = require('../db');
+const { db, isTopic } = require('../db');
 const { requireAuth, cleanUrl, str, numericId } = require('../helpers');
 const { NOTE_TYPES, NOTE_MAX_BYTES, blobConfigured, isBlobUrl, blobInfo, removeBlob } = require('../storage');
 const { countTiers } = require('../coins');
@@ -118,7 +118,7 @@ router.post('/notes', requireAuth, async (req, res) => {
   const audio_url = cleanUrl(req.body.audio_url);
   const fileUrl = String(req.body.file_url || '');
   if (!title) return res.status(400).json({ error: 'Title is required' });
-  if (!SUBJECTS.includes(subject)) return res.status(400).json({ error: 'Choose a subject' });
+  if (!isTopic(subject)) return res.status(400).json({ error: 'Choose a subject or exam' });
   if (!fileUrl && !video_url && !audio_url) return res.status(400).json({ error: 'Attach a file or add a video/audio link' });
   if (req.body.video_url && !video_url) return res.status(400).json({ error: 'Video link must start with http:// or https://' });
   if (req.body.audio_url && !audio_url) return res.status(400).json({ error: 'Audio link must start with http:// or https://' });

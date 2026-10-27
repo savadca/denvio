@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { useApi } from '../api';
-import { useSubjects } from '../subjects';
+import { useSubjects, useExams } from '../subjects';
 import NoteCard from '../components/NoteCard';
 import UploadNotesModal from '../components/UploadNotesModal';
 import { BookIcon, PlusIcon, SearchIcon, ChevronLeftIcon, ToothIcon } from '../components/Icons';
-import { subjectHue, subjectEmoji, timeAgo } from '../utils';
+import { subjectHue, subjectEmoji, timeAgo, EXAM_INFO } from '../utils';
 
 function SubjectCard({ subject, stats, onOpen, index }) {
   const count = stats?.count || 0;
@@ -22,6 +22,21 @@ function SubjectCard({ subject, stats, onOpen, index }) {
         <b>{count}</b> {count === 1 ? 'note' : 'notes'}
         {stats?.latest && <> · new {timeAgo(stats.latest)}</>}
       </span>
+    </button>
+  );
+}
+
+// Exam-prep card: wider, with the exam's blurb, for NEET MDS / INI-CET / international exams.
+function ExamCard({ exam, stats, onOpen, index }) {
+  const count = stats?.count || 0;
+  return (
+    <button className="exam-card" style={{ '--h': subjectHue(exam), animationDelay: `${index * 0.04}s` }} onClick={() => onOpen(exam)}>
+      <span className="exam-emoji" aria-hidden="true">{subjectEmoji(exam)}</span>
+      <span className="exam-text">
+        <span className="exam-name">{exam}</span>
+        <span className="exam-info">{EXAM_INFO[exam]}</span>
+      </span>
+      <span className="exam-count"><b>{count}</b>{count === 1 ? 'note' : 'notes'}</span>
     </button>
   );
 }
@@ -53,6 +68,7 @@ function NotesGrid({ url, emptyText, onUpload }) {
 
 export default function Notes() {
   const subjects = useSubjects();
+  const exams = useExams();
   const [params, setParams] = useSearchParams();
   const subject = params.get('subject') || '';
   const uploadOpen = params.get('upload') === '1';
@@ -77,7 +93,10 @@ export default function Notes() {
   const openSubject = (s) => update({ subject: s });
   const openUpload = () => update({ upload: '1' });
   const total = Object.values(stats.data || {}).reduce((sum, s) => sum + s.count, 0);
-  const visibleSubjects = q && !subject ? subjects.filter((s) => s.toLowerCase().includes(q.toLowerCase())) : subjects;
+  const matches = (s) => !q || subject || s.toLowerCase().includes(q.toLowerCase());
+  const visibleSubjects = subjects.filter(matches);
+  const visibleExams = exams.filter(matches);
+  const isExam = exams.includes(subject);
 
   const listUrl = (() => {
     const p = new URLSearchParams();
@@ -90,12 +109,12 @@ export default function Notes() {
     <div className="home notes-library">
       {subject ? (
         <header className="subject-hero" style={{ '--h': subjectHue(subject) }}>
-          <button className="subject-back" onClick={() => update({ subject: '' })}><ChevronLeftIcon size={18} /> All subjects</button>
+          <button className="subject-back" onClick={() => update({ subject: '' })}><ChevronLeftIcon size={18} /> {isExam ? 'All sections' : 'All subjects'}</button>
           <div className="subject-hero-row">
             <span className="subject-badge subject-badge-lg" aria-hidden="true">{subjectEmoji(subject)}</span>
             <div className="grow">
               <h1>{subject}</h1>
-              <p>{stats.data?.[subject]?.count || 0} approved notes</p>
+              <p>{isExam && <>{EXAM_INFO[subject]} · </>}{stats.data?.[subject]?.count || 0} approved notes</p>
             </div>
             <button className="btn btn-light" onClick={openUpload}><PlusIcon size={18} /> Upload</button>
           </div>
@@ -106,7 +125,7 @@ export default function Notes() {
           <span className="page-hero-icon"><BookIcon size={26} /></span>
           <div className="grow">
             <h1>Notes library</h1>
-            <p>{total} approved notes across {subjects.length} BDS subjects. Pick a subject or search everything.</p>
+            <p>{total} approved {total === 1 ? 'note' : 'notes'} · exam prep for NEET MDS, INI-CET & international exams, plus all {subjects.length} BDS subjects.</p>
           </div>
           <button className="btn btn-light hero-upload" onClick={openUpload}><PlusIcon size={18} /> Upload notes</button>
         </header>
@@ -116,7 +135,7 @@ export default function Notes() {
         <label className="glass-search">
           <SearchIcon size={18} />
           <input
-            placeholder={subject ? `Search ${subject} notes` : 'Search all notes or find a subject'}
+            placeholder={subject ? `Search ${subject} notes` : 'Search all notes, exams or subjects'}
             value={query} onChange={(e) => setQuery(e.target.value)}
           />
           {query && <button type="button" className="kbd" onClick={() => setQuery('')} aria-label="Clear search">✕</button>}
@@ -127,9 +146,17 @@ export default function Notes() {
         <NotesGrid key={listUrl} url={listUrl} emptyText={q ? `Nothing found for “${q}”` : `No ${subject} notes yet`} onUpload={openUpload} />
       ) : (
         <>
+          {visibleExams.length > 0 && (
+            <>
+              <div className="section-head"><h2>🎓 Exam prep</h2><span className="count-chip">{visibleExams.length}</span></div>
+              <div className="exam-grid">
+                {visibleExams.map((e, i) => <ExamCard key={e} exam={e} stats={stats.data?.[e]} onOpen={openSubject} index={i} />)}
+              </div>
+            </>
+          )}
           {visibleSubjects.length > 0 && (
             <>
-              <div className="section-head"><h2>Subjects</h2><span className="count-chip">{visibleSubjects.length}</span></div>
+              <div className="section-head"><h2>BDS subjects</h2><span className="count-chip">{visibleSubjects.length}</span></div>
               <div className="subject-grid">
                 {visibleSubjects.map((s, i) => <SubjectCard key={s} subject={s} stats={stats.data?.[s]} onOpen={openSubject} index={i} />)}
               </div>

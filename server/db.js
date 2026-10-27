@@ -248,4 +248,12 @@ const SUBJECTS = [
   'Orthodontics', 'Periodontics', 'Pedodontics', 'Public Health Dentistry',
 ];
 
-module.exports = { db, ready, SUBJECTS };
+// Exam-prep sections (Indian PG entrance + international licensing exams).
+// Notes and mock tests can be filed under these just like a subject.
+const EXAMS = [
+  'NEET MDS', 'INI-CET (AIIMS)', 'ORE – UK', 'ADC – Australia', 'NDEB – Canada', 'INBDE – USA', 'Gulf – DHA / MOH',
+];
+
+const isTopic = (value) => SUBJECTS.includes(value) || EXAMS.includes(value);
+
+module.exports = { db, ready, SUBJECTS, EXAMS, isTopic };

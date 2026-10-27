@@ -25,11 +25,11 @@ export default function Layout({ children }) {
   // `dock` items appear in the phone's bottom dock; the rest live in the "More" sheet.
   const items = [
     { to: '/', label: 'Home', icon: HomeIcon, end: true, dock: true },
-    { to: '/tests', label: 'Mock Tests', icon: TestIcon, dock: true },
     { to: '/notes', label: 'Notes', icon: BookIcon, dock: true },
+    { to: '/tests', label: 'Mock Tests', icon: TestIcon, dock: true },
+    { to: '/jobs', label: 'Jobs', icon: BriefcaseIcon, dock: true },
     { to: '/community', label: 'Community', icon: ChatIcon, dock: true },
     { to: '/news', label: 'Dental News', icon: NewsIcon },
-    { to: '/jobs', label: 'Jobs', icon: BriefcaseIcon },
     { to: '/leaderboard', label: 'Leaderboard', icon: TrophyIcon },
     ...(isAdmin ? [{ to: '/admin', label: 'Admin', icon: ShieldIcon, dock: true }] : []),
   ];

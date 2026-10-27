@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { uploadPresigned } from '@vercel/blob/client';
 import { api } from '../api';
 import { useAuth } from '../auth';
-import { useSubjects } from '../subjects';
+import { TopicOptions } from '../subjects';
 import Modal from './Modal';
 import { UploadIcon, CheckIcon } from './Icons';
 
@@ -11,7 +11,6 @@ const blank = (subject = '') => ({ title: '', subject, description: '', video_ur
 
 export default function UploadNotesModal({ open, onClose, defaultSubject = '', onUploaded }) {
   const { user } = useAuth();
-  const subjects = useSubjects();
   const [form, setForm] = useState(() => blank(defaultSubject));
   const [file, setFile] = useState(null);
   const [error, setError] = useState('');
@@ -97,10 +96,10 @@ export default function UploadNotesModal({ open, onClose, defaultSubject = '', o
           )}
 
           <label>Title<input value={form.title} onChange={set('title')} placeholder="e.g. Classification of dental caries" required maxLength={120} /></label>
-          <label>Subject
+          <label>Subject / exam
             <select value={form.subject} onChange={set('subject')} required>
-              <option value="">Select subject…</option>
-              {subjects.map((s) => <option key={s}>{s}</option>)}
+              <option value="">Select subject or exam…</option>
+              <TopicOptions />
             </select>
           </label>
           <label>Description<textarea rows={2} value={form.description} onChange={set('description')} placeholder="What does this cover? Year, topic, source…" maxLength={2000} /></label>
