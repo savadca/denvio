@@ -196,6 +196,22 @@ CREATE TABLE IF NOT EXISTS attempts (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS exam_notifications (
+  id SERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  body TEXT DEFAULT '',
+  region TEXT NOT NULL DEFAULT 'india',      -- india | uk | australia | canada | usa | gulf | other
+  category TEXT NOT NULL DEFAULT 'exam',     -- exam | admission | result | recruitment | regulatory | other
+  exam TEXT DEFAULT '',                      -- optional: one of EXAMS
+  source TEXT DEFAULT '',                    -- e.g. NBEMS, AIIMS, GDC
+  exam_date DATE,
+  deadline DATE,                             -- last date to apply / register
+  link_url TEXT DEFAULT '',
+  active INTEGER NOT NULL DEFAULT 1,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS client_errors (
   id SERIAL PRIMARY KEY,
   fingerprint TEXT NOT NULL UNIQUE,           -- same error on the same page is merged

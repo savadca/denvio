@@ -8,7 +8,7 @@ import Modal from './Modal';
 import ErrorBoundary from './ErrorBoundary';
 import {
   HomeIcon, TestIcon, BookIcon, ChatIcon, ShieldIcon, LogoutIcon, SettingsIcon, ToothIcon, TrophyIcon,
-  NewsIcon, BriefcaseIcon, MenuIcon,
+  NewsIcon, BriefcaseIcon, MenuIcon, GradIcon, MegaphoneIcon,
 } from './Icons';
 
 export function Logo({ className = '' }) {
@@ -26,9 +26,11 @@ export default function Layout({ children }) {
   const items = [
     { to: '/', label: 'Home', icon: HomeIcon, end: true, dock: true },
     { to: '/notes', label: 'Notes', icon: BookIcon, dock: true },
+    { to: '/exams', label: 'Exam Prep', icon: GradIcon, dock: true },
     { to: '/tests', label: 'Mock Tests', icon: TestIcon, dock: true },
     { to: '/jobs', label: 'Jobs', icon: BriefcaseIcon, dock: true },
-    { to: '/community', label: 'Community', icon: ChatIcon, dock: true },
+    { to: '/notifications', label: 'Notifications', icon: MegaphoneIcon },
+    { to: '/community', label: 'Community', icon: ChatIcon },
     { to: '/news', label: 'Dental News', icon: NewsIcon },
     { to: '/leaderboard', label: 'Leaderboard', icon: TrophyIcon },
     ...(isAdmin ? [{ to: '/admin', label: 'Admin', icon: ShieldIcon, dock: true }] : []),
@@ -63,6 +65,7 @@ export default function Layout({ children }) {
       <header className="topbar">
         <Link to="/"><Logo /></Link>
         <div className="topbar-actions">
+          <Link to="/notifications" aria-label="Notifications"><MegaphoneIcon /></Link>
           <Link to="/leaderboard" aria-label="Leaderboard" className="topbar-points">
             <TrophyIcon />{user.role !== 'admin' && <span>{user.points || 0}</span>}
           </Link>

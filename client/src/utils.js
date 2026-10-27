@@ -112,3 +112,67 @@ export const EXAM_INFO = {
   'Gulf – DHA / MOH': 'Dubai · UAE · Saudi · Qatar',
 };
 export const subjectEmoji = (subject) => SUBJECT_EMOJI[subject] || '📘';
+
+export const REGIONS = [
+  { id: 'india', label: 'India', flag: '🇮🇳' },
+  { id: 'uk', label: 'UK', flag: '🇬🇧' },
+  { id: 'australia', label: 'Australia', flag: '🇦🇺' },
+  { id: 'canada', label: 'Canada', flag: '🇨🇦' },
+  { id: 'usa', label: 'USA', flag: '🇺🇸' },
+  { id: 'gulf', label: 'Gulf (UAE, Saudi, Qatar)', flag: '🇦🇪' },
+  { id: 'other', label: 'Other', flag: '🌍' },
+];
+export const regionInfo = (id) => REGIONS.find((r) => r.id === id) || REGIONS[REGIONS.length - 1];
+
+export const NOTICE_CATEGORIES = [
+  { id: 'exam', label: 'Exam', emoji: '📝' },
+  { id: 'admission', label: 'Admission / Counselling', emoji: '🎓' },
+  { id: 'result', label: 'Result', emoji: '📊' },
+  { id: 'recruitment', label: 'Recruitment', emoji: '💼' },
+  { id: 'regulatory', label: 'Council / Regulatory', emoji: '⚖️' },
+  { id: 'other', label: 'Other', emoji: '📌' },
+];
+
+// Which region each exam belongs to (Exam Prep → Notifications tab).
+export const EXAM_REGION = {
+  'NEET MDS': 'india', 'INI-CET (AIIMS)': 'india', 'ORE – UK': 'uk', 'ADC – Australia': 'australia',
+  'NDEB – Canada': 'canada', 'INBDE – USA': 'usa', 'Gulf – DHA / MOH': 'gulf',
+};
+
+// Official bodies students should check; homepages only, so links don't go stale.
+export const OFFICIAL_SOURCES = {
+  india: [
+    { name: 'NBEMS — NEET MDS', url: 'https://natboard.edu.in' },
+    { name: 'AIIMS Exams — INI-CET', url: 'https://www.aiimsexams.ac.in' },
+    { name: 'MCC — MDS counselling', url: 'https://mcc.nic.in' },
+    { name: 'Dental Council of India', url: 'https://dciindia.gov.in' },
+  ],
+  uk: [{ name: 'General Dental Council — ORE', url: 'https://www.gdc-uk.org' }],
+  australia: [{ name: 'Australian Dental Council', url: 'https://adc.org.au' }],
+  canada: [{ name: 'NDEB — National Dental Examining Board', url: 'https://ndeb-bned.ca' }],
+  usa: [{ name: 'JCNDE — INBDE', url: 'https://jcnde.ada.org' }],
+  gulf: [
+    { name: 'Dubai Health Authority', url: 'https://www.dha.gov.ae' },
+    { name: 'UAE Ministry of Health (MOHAP)', url: 'https://mohap.gov.ae' },
+    { name: 'Saudi Commission for Health Specialties', url: 'https://scfhs.org.sa' },
+    { name: 'Qatar Ministry of Public Health', url: 'https://www.moph.gov.qa' },
+  ],
+};
+
+// "Closes in 5 days" / "Closes today" / "Closed" for a YYYY-MM-DD deadline.
+export function deadlineStatus(date) {
+  if (!date) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(`${date}T00:00:00`);
+  const days = Math.round((d - today) / 86400000);
+  if (days < 0) return { text: 'Closed', tone: 'closed' };
+  if (days === 0) return { text: 'Closes today', tone: 'urgent' };
+  if (days <= 7) return { text: `Closes in ${days} day${days > 1 ? 's' : ''}`, tone: 'urgent' };
+  return { text: `${days} days left`, tone: 'open' };
+}
+
+export function formatDate(date) {
+  if (!date) return '';
+  return new Date(`${date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}

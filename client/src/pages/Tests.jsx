@@ -49,6 +49,22 @@ function CreateTestModal({ onClose }) {
   );
 }
 
+export function TestCard({ test: t, index = 0 }) {
+  return (
+    <Link to={`/tests/${t.id}`} className="card test-card note-in" style={{ '--h': subjectHue(t.subject), animationDelay: `${Math.min(index, 8) * 0.04}s` }}>
+      <span className="test-topic"><span aria-hidden="true">{subjectEmoji(t.subject)}</span> {t.subject}</span>
+      <h3>{t.title}</h3>
+      {t.description && <p className="muted small clamp">{t.description}</p>}
+      <div className="test-meta">
+        <span>{t.question_count} questions</span>
+        <span><ClockIcon size={14} /> {t.duration_min} min</span>
+        {t.best_pct !== null && <span className={`score-pill ${t.best_pct >= 50 ? 'pass' : 'fail'}`}>Best {t.best_pct}%</span>}
+      </div>
+      <span className="test-go">{t.best_pct !== null ? 'Retake →' : 'Start →'}</span>
+    </Link>
+  );
+}
+
 export function TestList() {
   const { user } = useAuth();
   const isAdmin = user.role === 'admin';
@@ -91,19 +107,7 @@ export function TestList() {
         </div>
       )}
       <div className="test-grid">
-        {data?.map((t, i) => (
-          <Link key={t.id} to={`/tests/${t.id}`} className="card test-card note-in" style={{ '--h': subjectHue(t.subject), animationDelay: `${Math.min(i, 8) * 0.04}s` }}>
-            <span className="test-topic"><span aria-hidden="true">{subjectEmoji(t.subject)}</span> {t.subject}</span>
-            <h3>{t.title}</h3>
-            {t.description && <p className="muted small clamp">{t.description}</p>}
-            <div className="test-meta">
-              <span>{t.question_count} questions</span>
-              <span><ClockIcon size={14} /> {t.duration_min} min</span>
-              {t.best_pct !== null && <span className={`score-pill ${t.best_pct >= 50 ? 'pass' : 'fail'}`}>Best {t.best_pct}%</span>}
-            </div>
-            <span className="test-go">{t.best_pct !== null ? 'Retake →' : 'Start →'}</span>
-          </Link>
-        ))}
+        {data?.map((t, i) => <TestCard key={t.id} test={t} index={i} />)}
       </div>
 
       {isAdmin && createPortal(

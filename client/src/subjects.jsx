@@ -22,10 +22,13 @@ export const useSubjects = () => useCachedList('/subjects');
 // Exam-prep sections: NEET MDS, INI-CET and international licensing exams.
 export const useExams = () => useCachedList('/exams');
 
-// <optgroup>s for any "subject" dropdown that also accepts exams.
-export function TopicOptions() {
+// Options for a "subject" dropdown. only="subjects" | "exams" limits the list;
+// by default both are shown in two groups (used for mock tests).
+export function TopicOptions({ only }) {
   const subjects = useSubjects();
   const exams = useExams();
+  if (only === 'subjects') return subjects.map((s) => <option key={s}>{s}</option>);
+  if (only === 'exams') return exams.map((s) => <option key={s}>{s}</option>);
   return (
     <>
       <optgroup label="Exam prep">

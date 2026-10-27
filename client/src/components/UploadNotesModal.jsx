@@ -9,7 +9,8 @@ import { UploadIcon, CheckIcon } from './Icons';
 
 const blank = (subject = '') => ({ title: '', subject, description: '', video_url: '', audio_url: '' });
 
-export default function UploadNotesModal({ open, onClose, defaultSubject = '', onUploaded }) {
+// topics: 'subjects' (Notes library) or 'exams' (Exam Prep).
+export default function UploadNotesModal({ open, onClose, defaultSubject = '', onUploaded, topics = 'subjects' }) {
   const { user } = useAuth();
   const [form, setForm] = useState(() => blank(defaultSubject));
   const [file, setFile] = useState(null);
@@ -96,10 +97,10 @@ export default function UploadNotesModal({ open, onClose, defaultSubject = '', o
           )}
 
           <label>Title<input value={form.title} onChange={set('title')} placeholder="e.g. Classification of dental caries" required maxLength={120} /></label>
-          <label>Subject / exam
+          <label>{topics === 'exams' ? 'Exam' : 'Subject'}
             <select value={form.subject} onChange={set('subject')} required>
-              <option value="">Select subject or exam…</option>
-              <TopicOptions />
+              <option value="">{topics === 'exams' ? 'Select exam…' : 'Select subject…'}</option>
+              <TopicOptions only={topics} />
             </select>
           </label>
           <label>Description<textarea rows={2} value={form.description} onChange={set('description')} placeholder="What does this cover? Year, topic, source…" maxLength={2000} /></label>

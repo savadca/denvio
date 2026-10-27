@@ -11,6 +11,8 @@ import Settings from './pages/Settings';
 import Leaderboard from './pages/Leaderboard';
 import News from './pages/News';
 import Jobs from './pages/Jobs';
+import ExamPrep from './pages/ExamPrep';
+import Notifications from './pages/Notifications';
 import { TestList, TakeTest, Result } from './pages/Tests';
 import { Community, Thread } from './pages/Community';
 import Admin from './pages/admin/Admin';
@@ -71,6 +73,8 @@ export default function App() {
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/news" element={<News />} />
         <Route path="/jobs" element={<Jobs />} />
+        <Route path="/exams" element={<ExamPrep />} />
+        <Route path="/notifications" element={<Notifications />} />
         {isAdmin && <Route path="/admin" element={<Admin />} />}
         {isAdmin && <Route path="/admin/tests/:id" element={<TestEditor />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
