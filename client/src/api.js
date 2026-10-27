@@ -36,7 +36,9 @@ export function useApi(url) {
       .then((data) => setState({ data, error: null, loading: false }))
       .catch((error) => setState({ data: null, error, loading: false }));
   }, [url]);
-  useEffect(load, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
   const setData = (fn) => setState((s) => ({ ...s, data: typeof fn === 'function' ? fn(s.data) : fn }));
   return { ...state, reload: load, setData };
 }

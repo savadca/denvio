@@ -36,7 +36,11 @@ export default function App() {
   const { user } = useAuth();
   const { pathname } = useLocation();
 
-  useEffect(() => window.scrollTo(0, 0), [pathname]);
+  // Braces matter: newer Chrome returns a Promise from scrollTo, and an effect's
+  // return value is treated as its cleanup function ("n is not a function").
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
 
   if (user === undefined) return <Splash />;
 

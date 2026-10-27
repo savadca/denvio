@@ -65,7 +65,9 @@ export default function Notes() {
     const t = setTimeout(() => setQ(query.trim()), 300);
     return () => clearTimeout(t);
   }, [query]);
-  useEffect(() => setQuery(''), [subject]);
+  useEffect(() => {
+    setQuery('');
+  }, [subject]);
 
   const update = (changes) => {
     const next = new URLSearchParams(params);
