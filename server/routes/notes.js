@@ -72,6 +72,15 @@ router.get('/notes', requireAuth, async (req, res) => {
   res.json(rows.map((n) => serialize(n, me)));
 });
 
+// Approved-note counts per subject for the notes library.
+router.get('/notes/subjects', requireAuth, async (req, res) => {
+  const rows = await db.prepare(`
+    SELECT subject, COUNT(*) AS count, MAX(created_at) AS latest FROM notes
+    WHERE status = 'approved' GROUP BY subject
+  `).all();
+  res.json(Object.fromEntries(rows.map((r) => [r.subject, { count: r.count, latest: r.latest }])));
+});
+
 router.get('/notes/:id', requireAuth, async (req, res) => {
   const n = await db.prepare(`${NOTE_SELECT} WHERE n.id = ?`).get(req.user.id, req.user.id, req.params.id);
   if (!n || !canView(n, req.user)) return res.status(404).json({ error: 'Note not found' });

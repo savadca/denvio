@@ -4,7 +4,7 @@ import { useAuth } from './auth';
 import Layout, { Logo } from './components/Layout';
 import Auth from './pages/Auth';
 import Feed from './pages/Feed';
-import Upload from './pages/Upload';
+import Notes from './pages/Notes';
 import NoteDetail from './pages/NoteDetail';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
@@ -40,7 +40,8 @@ export default function App() {
     <Layout>
       <Routes>
         <Route path="/" element={<Feed />} />
-        <Route path="/upload" element={<Upload />} />
+        <Route path="/notes" element={<Notes />} />
+        <Route path="/upload" element={<Navigate to="/notes?upload=1" replace />} />
         <Route path="/notes/:id" element={<NoteDetail />} />
         <Route path="/u/:username" element={<Profile />} />
         <Route path="/settings" element={<Settings />} />

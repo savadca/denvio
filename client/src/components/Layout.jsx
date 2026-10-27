@@ -6,7 +6,7 @@ import Celebration from './Celebration';
 import AnnouncementBar from './AnnouncementBar';
 import Modal from './Modal';
 import {
-  HomeIcon, TestIcon, PlusIcon, ChatIcon, ShieldIcon, LogoutIcon, SettingsIcon, ToothIcon, TrophyIcon,
+  HomeIcon, TestIcon, BookIcon, ChatIcon, ShieldIcon, LogoutIcon, SettingsIcon, ToothIcon, TrophyIcon,
   NewsIcon, BriefcaseIcon, MenuIcon,
 } from './Icons';
 
@@ -25,7 +25,7 @@ export default function Layout({ children }) {
   const items = [
     { to: '/', label: 'Home', icon: HomeIcon, end: true, dock: true },
     { to: '/tests', label: 'Mock Tests', icon: TestIcon, dock: true },
-    { to: '/upload', label: 'Upload', icon: PlusIcon, dock: true },
+    { to: '/notes', label: 'Notes', icon: BookIcon, dock: true },
     { to: '/community', label: 'Community', icon: ChatIcon, dock: true },
     { to: '/news', label: 'Dental News', icon: NewsIcon },
     { to: '/jobs', label: 'Jobs', icon: BriefcaseIcon },

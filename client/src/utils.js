@@ -90,3 +90,12 @@ export function ago(value) {
   const t = timeAgo(value);
   return t === 'just now' ? t : `${t} ago`;
 }
+
+const SUBJECT_EMOJI = {
+  'General Anatomy': '🦴', 'General Physiology': '🫀', Biochemistry: '🧪', 'Dental Anatomy & Histology': '🦷',
+  'Dental Materials': '⚗️', 'General Pathology': '🔬', Microbiology: '🦠', Pharmacology: '💊',
+  'General Medicine': '🩺', 'General Surgery': '🏥', 'Oral Pathology': '🧫', 'Oral Medicine & Radiology': '☢️',
+  'Oral & Maxillofacial Surgery': '😷', Prosthodontics: '😁', 'Conservative Dentistry & Endodontics': '🛠️',
+  Orthodontics: '😬', Periodontics: '🌿', Pedodontics: '👶', 'Public Health Dentistry': '🌍',
+};
+export const subjectEmoji = (subject) => SUBJECT_EMOJI[subject] || '📘';

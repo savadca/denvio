@@ -45,7 +45,7 @@ function Hero({ user, profile, stats }) {
   const first = (user.full_name || user.username).split(' ')[0];
 
   const actions = [
-    { to: '/upload', label: 'Upload', icon: PlusIcon },
+    { to: '/notes?upload=1', label: 'Upload', icon: PlusIcon },
     { to: '/tests', label: 'Mock test', icon: TestIcon },
     { to: '/community', label: 'Ask', icon: ChatIcon },
     isAdmin ? { to: '/admin', label: 'Review', icon: ShieldIcon } : { to: '/leaderboard', label: 'Ranks', icon: TrophyIcon },
@@ -266,7 +266,7 @@ export default function Feed() {
           <span className="empty-orb"><ToothIcon size={40} /></span>
           <h3>{q ? `Nothing found for “${q}”` : `No notes yet${subject ? ` in ${subject}` : ''}`}</h3>
           <p className="muted">Share your notes — they appear here once an admin approves them.</p>
-          <Link to="/upload" className="btn btn-primary btn-glow">Upload notes</Link>
+          <Link to="/notes?upload=1" className="btn btn-primary btn-glow">Upload notes</Link>
         </div>
       )}
       <div className={`notes-${view}`}>

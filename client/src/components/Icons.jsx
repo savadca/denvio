@@ -43,3 +43,4 @@ export const ChevronLeftIcon = make(<><path d="m15 6-6 6 6 6" /></>);
 export const ChevronRightIcon = make(<><path d="m9 6 6 6-6 6" /></>);
 export const ExternalIcon = make(<><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></>);
 export const PinIcon = make(<><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.5" /></>);
+export const BookIcon = make(<><path d="M4 5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2z" /><path d="M4 20a2 2 0 0 0 2 2h13v-4M9 7h6M9 11h4" /></>);
