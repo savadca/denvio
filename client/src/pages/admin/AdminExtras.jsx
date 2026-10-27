@@ -180,3 +180,59 @@ export function JobBoard() {
     </>
   );
 }
+
+function deviceLabel(ua = '') {
+  const android = ua.match(/Android ([\d.]+)/);
+  const ios = ua.match(/OS (\d+[_\d]*) like Mac OS X/);
+  const chrome = ua.match(/(?:Chrome|CriOS)\/(\d+)/);
+  const samsung = ua.match(/SamsungBrowser\/(\d+)/);
+  const os = android ? `Android ${android[1]}` : ios ? `iOS ${ios[1].replace(/_/g, '.')}` : /Windows/.test(ua) ? 'Windows' : /Mac OS X/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : 'Unknown OS';
+  const browser = samsung ? `Samsung Internet ${samsung[1]}` : chrome ? `Chrome ${chrome[1]}` : /Firefox\/(\d+)/.test(ua) ? `Firefox ${ua.match(/Firefox\/(\d+)/)[1]}` : /Safari/.test(ua) ? 'Safari' : 'Browser';
+  return `${os} · ${browser}`;
+}
+
+export function ClientErrors({ onChange }) {
+  const toast = useToast();
+  const { data, loading, reload } = useApi('/admin/client-errors');
+  const run = async (fn, msg) => {
+    try {
+      await fn();
+      toast(msg);
+      reload();
+      onChange?.();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  };
+  if (loading && !data) return <div className="card skeleton" />;
+  return (
+    <>
+      <div className="row gap wrap errors-head">
+        <p className="muted small grow">Crashes reported by users’ browsers. Same error on the same page is grouped. Also in Vercel → Logs (search “client-error”).</p>
+        {data?.length > 0 && <button className="btn btn-sm btn-danger-ghost" onClick={() => confirm('Clear all error reports?') && run(() => api.del('/admin/client-errors'), 'Cleared')}>Clear all</button>}
+      </div>
+      {!data?.length && <div className="empty"><p className="muted">No errors reported 🎉</p></div>}
+      <div className="card list">
+        {data?.map((e) => (
+          <div key={e.id} className="error-row">
+            <div className="row gap">
+              <span className={`badge badge-${e.kind === 'crash' ? 'rejected' : 'pending'}`}>{e.kind}</span>
+              <b className="grow error-msg">{e.message}</b>
+              <span className="count">{e.count}×</span>
+              <button className="icon-btn" aria-label="Delete report" onClick={() => run(() => api.del(`/admin/client-errors/${e.id}`), 'Deleted')}><TrashIcon size={16} /></button>
+            </div>
+            <div className="muted small">
+              {e.path || '—'} · {deviceLabel(e.user_agent)}{e.username && <> · @{e.username}</>} · last {ago(e.last_seen)}
+            </div>
+            {(e.stack || e.component_stack) && (
+              <details className="crash-details">
+                <summary>Technical details</summary>
+                <code>{e.stack}{e.component_stack && `\n\nComponents:${e.component_stack}`}\n\nUser agent: {e.user_agent}</code>
+              </details>
+            )}
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}

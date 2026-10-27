@@ -19,7 +19,8 @@ router.get('/admin/stats', async (req, res) => {
       (SELECT COUNT(*) FROM users WHERE status = 'blocked') AS blocked,
       (SELECT COUNT(*) FROM reports WHERE status = 'open') AS open_reports,
       (SELECT COUNT(*) FROM tests) AS tests,
-      (SELECT COUNT(*) FROM awards) AS awards
+      (SELECT COUNT(*) FROM awards) AS awards,
+      (SELECT COUNT(*) FROM client_errors) AS client_errors
   `).get());
 });
 

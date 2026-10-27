@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { AuthProvider, ToastProvider } from './auth';
 import ErrorBoundary from './components/ErrorBoundary';
+import { installGlobalErrorReporting } from './errorReporter';
 // Self-hosted fonts: a render-blocking Google Fonts request could leave phones on a
 // blank screen for seconds on slow networks.
 import '@fontsource/plus-jakarta-sans/400.css';
@@ -13,6 +14,8 @@ import '@fontsource/plus-jakarta-sans/700.css';
 import '@fontsource/plus-jakarta-sans/800.css';
 import '@fontsource/grand-hotel/400.css';
 import './styles.css';
+
+installGlobalErrorReporting();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

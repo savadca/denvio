@@ -1,4 +1,5 @@
 import { Component } from 'react';
+import { reportError } from '../errorReporter';
 
 // DOM errors like these come from browser extensions or Chrome's auto-translate
 // rewriting the page under React; a single reload fixes them.
@@ -20,8 +21,9 @@ export default class ErrorBoundary extends Component {
     return { error };
   }
 
-  componentDidCatch(error) {
+  componentDidCatch(error, info) {
     console.error('Denvio crashed:', error);
+    reportError('crash', error, { componentStack: info?.componentStack });
     if (DOM_MUTATION.test(String(error?.message)) && !reloadedRecently()) {
       try { sessionStorage.setItem(RELOAD_KEY, String(Date.now())); } catch { /* storage blocked */ }
       window.location.reload();

@@ -10,7 +10,7 @@ import { PlayIcon, AudioIcon, FileIcon, CheckIcon, XIcon, TrashIcon, SearchIcon,
 import Coin from '../../components/Coin';
 import AwardDialog from '../../components/AwardDialog';
 import { tierInfo } from '../../coins';
-import { Announcements, JobBoard } from './AdminExtras';
+import { Announcements, JobBoard, ClientErrors } from './AdminExtras';
 import { timeAgo, fileKind } from '../../utils';
 
 // ---------- Note review ----------
@@ -365,6 +365,7 @@ export default function Admin() {
     { id: 'coins', label: 'Coins', count: s.awards },
     { id: 'announce', label: 'Announcements' },
     { id: 'jobs', label: 'Jobs' },
+    { id: 'errors', label: 'Errors', count: s.client_errors, alert: true },
   ];
   const tab = tabs.some((t) => t.id === params.get('tab')) ? params.get('tab') : 'review';
   const refresh = stats.reload;
@@ -396,6 +397,7 @@ export default function Admin() {
       {tab === 'coins' && <Coins onChange={refresh} />}
       {tab === 'announce' && <Announcements />}
       {tab === 'jobs' && <JobBoard />}
+      {tab === 'errors' && <ClientErrors onChange={refresh} />}
     </div>
   );
 }

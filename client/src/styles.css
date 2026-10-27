@@ -1236,3 +1236,9 @@ body:has(.ann-bell) .fab { bottom: 92px; }
 .crash-emoji { font-size: 44px; }
 .crash-details { width: 100%; text-align: left; font-size: 12px; color: var(--muted); }
 .crash-details code { display: block; margin-top: 6px; padding: 8px; border-radius: 8px; background: var(--elevated); word-break: break-word; white-space: pre-wrap; }
+
+/* Admin → Errors */
+.errors-head { margin-bottom: 8px; }
+.error-row { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-bottom: 1px solid var(--border-soft); }
+.error-row:last-child { border-bottom: 0; }
+.error-msg { word-break: break-word; }

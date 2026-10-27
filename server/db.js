@@ -196,6 +196,21 @@ CREATE TABLE IF NOT EXISTS attempts (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS client_errors (
+  id SERIAL PRIMARY KEY,
+  fingerprint TEXT NOT NULL UNIQUE,           -- same error on the same page is merged
+  message TEXT NOT NULL,
+  stack TEXT DEFAULT '',
+  component_stack TEXT DEFAULT '',
+  kind TEXT NOT NULL DEFAULT 'crash',         -- crash | error | rejection
+  path TEXT DEFAULT '',
+  user_agent TEXT DEFAULT '',
+  username TEXT DEFAULT '',
+  count INTEGER NOT NULL DEFAULT 1,
+  first_seen TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_seen TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS notes_status_created ON notes (status, created_at DESC);
 CREATE INDEX IF NOT EXISTS awards_user ON awards (user_id);
 CREATE INDEX IF NOT EXISTS comments_post ON comments (post_id);
