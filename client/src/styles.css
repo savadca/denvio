@@ -1362,3 +1362,23 @@ body:has(.ann-bell) .fab { bottom: 92px; }
   .notice-flag { width: 40px; height: 40px; font-size: 24px; }
   .topbar-actions { gap: 14px; }
 }
+
+/* Question papers & multi-file uploads */
+.page-hero-papers .aurora i:nth-child(1) { background: #14b8a6; }
+.page-hero-papers .aurora i:nth-child(2) { background: #6366f1; }
+.page-hero-papers .aurora i:nth-child(3) { background: #f43f5e; opacity: .35; }
+.subject-hero-row .row.gap { flex-wrap: wrap; justify-content: flex-end; }
+.paper-subject { margin-bottom: 22px; }
+.paper-subject .section-head h2 { display: inline-flex; align-items: center; gap: 8px; font-size: 17px; }
+.paper-row { gap: 10px; }
+.paper-row .strong { color: var(--text); word-break: break-word; }
+.paper-kind { width: 42px; height: 42px; flex-shrink: 0; border-radius: 12px; display: grid; place-items: center; font-size: 11px; font-weight: 800; text-transform: uppercase; background: var(--elevated); color: var(--muted); }
+.file-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; }
+.file-list li { display: flex; align-items: center; gap: 10px; padding: 8px 6px 8px 12px; border-radius: 14px; background: var(--elevated); transition: box-shadow .2s; }
+.file-list li.uploading { box-shadow: inset 0 0 0 2px var(--blue); }
+.file-list li > svg { flex-shrink: 0; color: var(--muted); }
+.file-list .grow { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.file-list input { padding: 6px 10px; }
+.file-list .small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-single { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 12px; border-radius: 14px; background: var(--elevated); font-size: 13px; word-break: break-all; }
+@media (max-width: 767px) { .subject-hero-row { flex-wrap: wrap; } }

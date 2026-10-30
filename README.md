@@ -25,7 +25,8 @@ Optional live job listings: get a free key at https://developer.adzuna.com and s
 ## Features
 
 - **Accounts** – username/password login, `user` and `admin` roles, profile page with avatar, bio, college, year.
-- **Notes** – upload PDF/image/Word/PowerPoint/text (25 MB) with optional video and audio links. Uploads go to an admin review queue and only appear in the feed once approved. Like, save, download.
+- **Notes** – upload PDF/image/Word/PowerPoint/text (25 MB) with optional video and audio links. Several files can be picked at once; each becomes its own note with its own title. Uploads go to an admin review queue and only appear in the feed once approved. Like, save, download.
+- **Question papers** – previous year papers organised as exam → year → subject. Only admins can create exam categories (name, emoji, description), add years and upload papers (several files at once, each with its own title); everyone can view and download.
 - **Video/audio** – a "View video" / "Listen audio" button appears only if the uploader added a link *and* an admin enabled it. The player loads only when clicked (YouTube, Vimeo, Google Drive, Spotify, SoundCloud, direct .mp4/.mp3).
 - **Mock tests** – admins build subject-wise MCQ tests with explanations; students take timed tests and review results.
 - **Community** – discussions by subject with replies; report posts, comments or users.

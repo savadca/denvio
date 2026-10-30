@@ -1,9 +1,7 @@
 const express = require('express');
-const { issueSignedToken } = require('@vercel/blob');
-const { handleUploadPresigned } = require('@vercel/blob/client');
 const { db, isTopic } = require('../db');
 const { requireAuth, cleanUrl, str, numericId } = require('../helpers');
-const { NOTE_TYPES, NOTE_MAX_BYTES, blobConfigured, isBlobUrl, blobInfo, removeBlob } = require('../storage');
+const { presignedUpload, NOTE_TYPES, NOTE_MAX_BYTES, isBlobUrl, blobInfo, removeBlob } = require('../storage');
 const { countTiers } = require('../coins');
 
 const router = express.Router();
@@ -87,28 +85,13 @@ router.get('/notes/:id', requireAuth, async (req, res) => {
   res.json(serialize(n, req.user));
 });
 
-// Step 1 of an upload: the browser asks for a presigned URL for one exact pathname,
-// then sends the file straight to Vercel Blob (so files can be bigger than Vercel's
-// 4.5 MB request limit). The browser picks a unique name inside the user's own folder.
-router.post('/notes/upload', async (req, res) => {
-  if (!blobConfigured()) return res.status(503).json({ error: 'File storage is not set up yet (connect a Vercel Blob store)' });
-  const result = await handleUploadPresigned({
-    body: req.body,
-    request: req,
-    // Only used to verify upload-completed callbacks, which this app doesn't request.
-    webhookPublicKey: process.env.BLOB_WEBHOOK_PUBLIC_KEY || 'unused',
-    getSignedToken: async (pathname) => {
-      if (!req.user) throw Object.assign(new Error('Please log in'), { status: 401 });
-      if (!new RegExp(`^notes/${req.user.id}/[\\w.-]{1,160}$`).test(pathname)) {
-        throw Object.assign(new Error('Invalid upload path'), { status: 400 });
-      }
-      const limits = { allowedContentTypes: NOTE_TYPES, maximumSizeInBytes: NOTE_MAX_BYTES };
-      const token = await issueSignedToken({ pathname, operations: ['put'], ...limits });
-      return { token, urlOptions: limits };
-    },
-  });
-  res.json(result);
-});
+// Step 1 of an upload: presigned URL for one file. The browser picks a unique name
+// inside the user's own folder.
+router.post('/notes/upload', presignedUpload({
+  allowPath: (req, pathname) => new RegExp(`^notes/${req.user.id}/[\\w.-]{1,160}$`).test(pathname),
+  types: NOTE_TYPES,
+  maxBytes: NOTE_MAX_BYTES,
+}));
 
 // Step 2: save the note, pointing at the uploaded file (if any).
 router.post('/notes', requireAuth, async (req, res) => {

@@ -8,7 +8,7 @@ import Modal from './Modal';
 import ErrorBoundary from './ErrorBoundary';
 import {
   HomeIcon, TestIcon, BookIcon, ChatIcon, ShieldIcon, LogoutIcon, SettingsIcon, ToothIcon, TrophyIcon,
-  NewsIcon, BriefcaseIcon, MenuIcon, GradIcon, MegaphoneIcon,
+  NewsIcon, BriefcaseIcon, MenuIcon, GradIcon, MegaphoneIcon, PaperIcon,
 } from './Icons';
 
 export function Logo({ className = '' }) {
@@ -27,6 +27,7 @@ export default function Layout({ children }) {
     { to: '/', label: 'Home', icon: HomeIcon, end: true, dock: true },
     { to: '/notes', label: 'Notes', icon: BookIcon, dock: true },
     { to: '/exams', label: 'Exam Prep', icon: GradIcon, dock: true },
+    { to: '/papers', label: 'Question Papers', icon: PaperIcon },
     { to: '/tests', label: 'Mock Tests', icon: TestIcon, dock: true },
     { to: '/jobs', label: 'Jobs', icon: BriefcaseIcon, dock: true },
     { to: '/notifications', label: 'Notifications', icon: MegaphoneIcon },

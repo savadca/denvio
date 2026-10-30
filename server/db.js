@@ -227,6 +227,31 @@ CREATE TABLE IF NOT EXISTS client_errors (
   last_seen TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Previous year question papers: admin-made exam categories → year → subject-wise papers.
+CREATE TABLE IF NOT EXISTS paper_exams (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  description TEXT DEFAULT '',
+  emoji TEXT DEFAULT '',
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS papers (
+  id SERIAL PRIMARY KEY,
+  exam_id INTEGER NOT NULL REFERENCES paper_exams(id) ON DELETE CASCADE,
+  year INTEGER NOT NULL,
+  subject TEXT NOT NULL,
+  title TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  file_name TEXT DEFAULT '',
+  file_mime TEXT DEFAULT '',
+  downloads INTEGER NOT NULL DEFAULT 0,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS papers_exam_year ON papers (exam_id, year DESC);
 CREATE INDEX IF NOT EXISTS notes_status_created ON notes (status, created_at DESC);
 CREATE INDEX IF NOT EXISTS awards_user ON awards (user_id);
 CREATE INDEX IF NOT EXISTS comments_post ON comments (post_id);

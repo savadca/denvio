@@ -1,7 +1,8 @@
 const path = require('path');
 const crypto = require('crypto');
 const multer = require('multer');
-const { put, del, head } = require('@vercel/blob');
+const { put, del, head, issueSignedToken } = require('@vercel/blob');
+const { handleUploadPresigned } = require('@vercel/blob/client');
 
 // Files live in Vercel Blob. Connecting a Blob store in Vercel → Storage adds either
 // BLOB_STORE_ID (+ automatic OIDC auth on Vercel) or a classic BLOB_READ_WRITE_TOKEN;
@@ -51,6 +52,30 @@ async function removeBlob(url) {
   }
 }
 
+// Express handler for step 1 of a browser upload: the browser asks for a presigned URL
+// for one exact pathname, then sends the file straight to Vercel Blob (so files can be
+// bigger than Vercel's 4.5 MB request limit). `allowPath(req, pathname)` decides whether
+// this user may write there; `types` / `maxBytes` limit what Blob will accept.
+function presignedUpload({ allowPath, types, maxBytes }) {
+  return async (req, res) => {
+    if (!blobConfigured()) return res.status(503).json({ error: 'File storage is not set up yet (connect a Vercel Blob store)' });
+    const result = await handleUploadPresigned({
+      body: req.body,
+      request: req,
+      // Only used to verify upload-completed callbacks, which this app doesn't request.
+      webhookPublicKey: process.env.BLOB_WEBHOOK_PUBLIC_KEY || 'unused',
+      getSignedToken: async (pathname) => {
+        if (!req.user) throw Object.assign(new Error('Please log in'), { status: 401 });
+        if (!allowPath(req, pathname)) throw Object.assign(new Error('Invalid upload path'), { status: 400 });
+        const limits = { allowedContentTypes: types, maximumSizeInBytes: maxBytes };
+        const token = await issueSignedToken({ pathname, operations: ['put'], ...limits });
+        return { token, urlOptions: limits };
+      },
+    });
+    res.json(result);
+  };
+}
+
 // Avatars are small, so they go through the server (multer keeps them in memory).
 const avatarUpload = multer({
   storage: multer.memoryStorage(),
@@ -76,4 +101,4 @@ async function saveAvatar(userId, file) {
   return blob.url;
 }
 
-module.exports = { NOTE_TYPES, NOTE_MAX_BYTES, blobConfigured, isBlobUrl, blobInfo, removeBlob, avatarUpload, saveAvatar };
+module.exports = { presignedUpload, NOTE_TYPES, NOTE_MAX_BYTES, blobConfigured, isBlobUrl, blobInfo, removeBlob, avatarUpload, saveAvatar };
