@@ -1,10 +1,14 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { api } from './api';
+import Modal from './components/Modal';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(undefined); // undefined = still checking
+  const [user, setUser] = useState(undefined); // undefined = still checking; null = visitor
+  const [loginPrompt, setLoginPrompt] = useState(null); // message shown in the "sign up" sheet
+  const promptLogin = (message) => setLoginPrompt(message || 'Create a free account to continue.');
 
   useEffect(() => {
     // The first request after the site has been idle can be slow or fail while the
@@ -21,7 +25,11 @@ export function AuthProvider({ children }) {
       }
     };
     load();
-    const onUnauth = () => setUser(null);
+    // A visitor (or an expired session) tried something that needs an account.
+    const onUnauth = (e) => {
+      setUser(null);
+      if (e.detail?.method && e.detail.method !== 'GET') promptLogin();
+    };
     window.addEventListener('denvio:unauth', onUnauth);
     return () => {
       cancelled = true;
@@ -32,6 +40,13 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     setUser,
+    promptLogin,
+    // Returns true for signed-in users; otherwise asks the visitor to log in or sign up.
+    requireLogin: (message) => {
+      if (user) return true;
+      promptLogin(message);
+      return false;
+    },
     refresh: () => api.get('/auth/me').then((d) => setUser(d.user)).catch(() => {}),
     login: async (username, password) => setUser((await api.post('/auth/login', { username, password })).user),
     register: async (form) => setUser((await api.post('/auth/register', form)).user),
@@ -40,7 +55,30 @@ export function AuthProvider({ children }) {
       setUser(null);
     },
   };
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      {loginPrompt && !user && <LoginPrompt message={loginPrompt} onClose={() => setLoginPrompt(null)} />}
+    </AuthContext.Provider>
+  );
+}
+
+function LoginPrompt({ message, onClose }) {
+  const { pathname, search } = useLocation();
+  const next = encodeURIComponent(pathname + search);
+  return (
+    <Modal open onClose={onClose} title="Join Denvio" className="login-prompt">
+      <div className="center-card">
+        <span className="login-prompt-emoji" aria-hidden="true">🦷</span>
+        <p className="strong">{message}</p>
+        <p className="muted small">It's free. Browsing stays open to everyone; an account is only needed to upload, download, take tests and join discussions.</p>
+        <div className="row gap center-row">
+          <Link className="btn btn-primary" to={`/register?next=${next}`} onClick={onClose}>Sign up</Link>
+          <Link className="btn" to={`/login?next=${next}`} onClick={onClose}>Log in</Link>
+        </div>
+      </div>
+    </Modal>
+  );
 }
 
 export const useAuth = () => useContext(AuthContext);

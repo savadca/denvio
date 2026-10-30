@@ -101,16 +101,6 @@ const SUBJECT_EMOJI = {
   'NDEB – Canada': '🇨🇦', 'INBDE – USA': '🇺🇸', 'Gulf – DHA / MOH': '🇦🇪',
 };
 
-// One-line blurbs for the exam-prep cards.
-export const EXAM_INFO = {
-  'NEET MDS': 'MDS entrance · India',
-  'INI-CET (AIIMS)': 'AIIMS, PGIMER, JIPMER · India',
-  'ORE – UK': 'Overseas Registration Exam',
-  'ADC – Australia': 'Australian Dental Council',
-  'NDEB – Canada': 'AFK · ACJ · NDECC',
-  'INBDE – USA': 'Integrated National Board',
-  'Gulf – DHA / MOH': 'Dubai · UAE · Saudi · Qatar',
-};
 export const subjectEmoji = (subject) => SUBJECT_EMOJI[subject] || '📘';
 
 export const REGIONS = [
@@ -132,12 +122,6 @@ export const NOTICE_CATEGORIES = [
   { id: 'regulatory', label: 'Council / Regulatory', emoji: '⚖️' },
   { id: 'other', label: 'Other', emoji: '📌' },
 ];
-
-// Which region each exam belongs to (Exam Prep → Notifications tab).
-export const EXAM_REGION = {
-  'NEET MDS': 'india', 'INI-CET (AIIMS)': 'india', 'ORE – UK': 'uk', 'ADC – Australia': 'australia',
-  'NDEB – Canada': 'canada', 'INBDE – USA': 'usa', 'Gulf – DHA / MOH': 'gulf',
-};
 
 // Official bodies students should check; homepages only, so links don't go stale.
 export const OFFICIAL_SOURCES = {

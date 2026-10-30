@@ -130,7 +130,7 @@ export function NotificationList({ region = '', category = '', exam = '', q = ''
   }
   return (
     <div className="notice-list">
-      {list.data.map((n, i) => <NotificationCard key={n.id} n={n} index={i} isAdmin={user.role === 'admin'} onChanged={list.reload} />)}
+      {list.data.map((n, i) => <NotificationCard key={n.id} n={n} index={i} isAdmin={user?.role === 'admin'} onChanged={list.reload} />)}
     </div>
   );
 }
@@ -156,7 +156,7 @@ export function OfficialSources({ regions }) {
 
 export default function Notifications() {
   const { user } = useAuth();
-  const isAdmin = user.role === 'admin';
+  const isAdmin = user?.role === 'admin';
   const [region, setRegion] = useState('');
   const [category, setCategory] = useState('');
   const [query, setQuery] = useState('');

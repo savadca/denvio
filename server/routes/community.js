@@ -16,7 +16,7 @@ function canWrite(req, res, next) {
   next();
 }
 
-router.get('/posts', requireAuth, async (req, res) => {
+router.get('/posts', async (req, res) => {
   const params = [];
   let where = '';
   if (req.query.subject) {
@@ -44,7 +44,7 @@ router.post('/posts', requireAuth, canWrite, async (req, res) => {
   res.status(201).json({ id: Number(lastInsertRowid) });
 });
 
-router.get('/posts/:id', requireAuth, async (req, res) => {
+router.get('/posts/:id', async (req, res) => {
   const p = await db.prepare(`
     SELECT p.*, u.username, u.avatar, u.full_name,
       (SELECT string_agg(a.tier, ',') FROM awards a WHERE a.post_id = p.id) AS award_tiers

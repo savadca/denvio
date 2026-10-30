@@ -47,3 +47,4 @@ export const BookIcon = make(<><path d="M4 5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2
 export const GradIcon = make(<><path d="M2 9l10-5 10 5-10 5z" /><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5M22 9v6" /></>);
 export const MegaphoneIcon = make(<><path d="M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1z" /><path d="M17 8a5 5 0 0 1 0 8M20 5a9 9 0 0 1 0 14" /></>);
 export const PaperIcon = make(<><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /><path d="M9 12.5l1.5 1.5L13 11.5M9 17h6" /></>);
+export const UserIcon = make(<><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>);

@@ -1,6 +1,6 @@
 const express = require('express');
-const { db, EXAMS } = require('../db');
-const { requireAuth, requireAdmin, cleanUrl, str, numericId } = require('../helpers');
+const { db, isExam } = require('../db');
+const { requireAdmin, cleanUrl, str, numericId } = require('../helpers');
 
 const router = express.Router();
 router.param('id', numericId);
@@ -11,12 +11,12 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 // Official exam / council notifications for India and the main international destinations.
 // Open deadlines come first (soonest first), then everything else by newest.
-router.get('/notifications', requireAuth, async (req, res) => {
+router.get('/notifications', async (req, res) => {
   const where = ['active = 1'];
   const params = [];
   if (REGIONS.includes(req.query.region)) { where.push('region = ?'); params.push(req.query.region); }
   if (CATEGORIES.includes(req.query.category)) { where.push('category = ?'); params.push(req.query.category); }
-  if (EXAMS.includes(req.query.exam)) { where.push('exam = ?'); params.push(req.query.exam); }
+  if (await isExam(req.query.exam)) { where.push('exam = ?'); params.push(req.query.exam); }
   if (req.query.q) {
     where.push('(title ILIKE ? OR body ILIKE ? OR source ILIKE ?)');
     params.push(...Array(3).fill(`%${str(req.query.q, 80)}%`));
@@ -30,7 +30,7 @@ router.get('/notifications', requireAuth, async (req, res) => {
   `).all(...params));
 });
 
-function fields(body) {
+async function fields(body) {
   const title = str(body.title, 160);
   if (!title) return { error: 'Title is required' };
   const dates = {};
@@ -46,7 +46,7 @@ function fields(body) {
     body: str(body.body, 1500),
     region: REGIONS.includes(body.region) ? body.region : 'india',
     category: CATEGORIES.includes(body.category) ? body.category : 'exam',
-    exam: EXAMS.includes(body.exam) ? body.exam : '',
+    exam: (await isExam(body.exam)) ? body.exam : '',
     source: str(body.source, 80),
     link_url: link,
     ...dates,
@@ -54,7 +54,7 @@ function fields(body) {
 }
 
 router.post('/admin/notifications', requireAdmin, async (req, res) => {
-  const f = fields(req.body);
+  const f = await fields(req.body);
   if (f.error) return res.status(400).json(f);
   const { lastInsertRowid } = await db.prepare(`
     INSERT INTO exam_notifications (title, body, region, category, exam, source, exam_date, deadline, link_url, created_by)

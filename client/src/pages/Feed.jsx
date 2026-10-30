@@ -37,6 +37,38 @@ function ProgressRing({ value, size = 104, stroke = 9, children }) {
   );
 }
 
+// Shown on the home page to visitors who haven't signed up.
+function GuestHero() {
+  const { promptLogin } = useAuth();
+  const actions = [
+    { to: '/notes', label: 'Notes', icon: GridIcon },
+    { to: '/exams', label: 'Exam prep', icon: TestIcon },
+    { to: '/jobs', label: 'Jobs', icon: BriefcaseIcon },
+    { to: '/community', label: 'Discuss', icon: ChatIcon },
+  ];
+  return (
+    <section className="hero">
+      <div className="aurora" aria-hidden="true"><i /><i /><i /></div>
+      <div className="hero-main">
+        <p className="hero-eyebrow">{greeting()} 👋</p>
+        <h1 className="hero-title">Welcome to Denvio</h1>
+        <p className="hero-sub">Notes, question papers, mock tests and discussions by BDS students. Browse freely — sign up to upload, download and take tests.</p>
+        <div className="quick-actions">
+          {actions.map(({ to, label, icon: Icon }, i) => (
+            <Link key={to} to={to} className="qa" style={{ animationDelay: `${0.1 + i * 0.06}s` }}>
+              <span className="qa-icon"><Icon size={20} /></span>
+              <span>{label}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+      <div className="hero-side">
+        <button className="btn btn-light" onClick={() => promptLogin('Join Denvio to share and download notes.')}>Sign up free</button>
+      </div>
+    </section>
+  );
+}
+
 function Hero({ user, profile, stats }) {
   const isAdmin = user.role === 'admin';
   const points = profile?.points ?? user.points ?? 0;
@@ -92,7 +124,7 @@ function Hero({ user, profile, stats }) {
 }
 
 function Bento({ user, profile, stats, tests, posts, leaders }) {
-  const isAdmin = user.role === 'admin';
+  const isAdmin = user?.role === 'admin';
   const next = tests?.find((t) => t.best_pct === null) || tests?.[0];
   const post = posts?.[0];
   return (
@@ -145,6 +177,13 @@ function Bento({ user, profile, stats, tests, posts, leaders }) {
             <span><b>{stats?.users ?? '–'}</b> users</span>
           </span>
         </Link>
+      ) : !user ? (
+        <Link to="/register" className="tile tile-coins">
+          <span className="tile-icon"><Coin tier="gold" size={22} /></span>
+          <span className="tile-label">Earn coins</span>
+          <span className="tile-title">Sign up and share notes to earn coins and climb the leaderboard.</span>
+          <span className="tile-cta">Sign up →</span>
+        </Link>
       ) : (
         <Link to={`/u/${user.username}?tab=awards`} className="tile tile-coins">
           <span className="tile-icon"><Coin tier="gold" size={22} /></span>
@@ -173,7 +212,7 @@ function readView() {
 
 export default function Feed() {
   const { user } = useAuth();
-  const isAdmin = user.role === 'admin';
+  const isAdmin = user?.role === 'admin';
   const subjects = useSubjects();
   const [subject, setSubject] = useState('');
   const [query, setQuery] = useState('');
@@ -207,7 +246,7 @@ export default function Feed() {
   if (subject) params.set('subject', subject);
   if (q) params.set('q', q);
   const notes = useApi(`/notes?${params}`);
-  const profile = useApi(isAdmin ? null : `/users/${user.username}`);
+  const profile = useApi(user && !isAdmin ? `/users/${user.username}` : null);
   const stats = useApi(isAdmin ? '/admin/stats' : null);
   const tests = useApi('/tests');
   const posts = useApi('/posts');
@@ -216,7 +255,7 @@ export default function Feed() {
 
   return (
     <div className="home">
-      <Hero user={user} profile={profile.data} stats={stats.data} />
+      {user ? <Hero user={user} profile={profile.data} stats={stats.data} /> : <GuestHero />}
       <Bento user={user} profile={profile.data} stats={stats.data} tests={tests.data} posts={posts.data} leaders={leaders.data} />
 
       {news.data?.items?.length > 0 && (

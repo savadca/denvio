@@ -26,7 +26,7 @@ const shape = (a) => ({
   awarded_by: a.awarded_by,
 });
 
-router.get('/leaderboard', requireAuth, async (req, res) => {
+router.get('/leaderboard', async (req, res) => {
   const since = req.query.period === 'month' ? "AND a.created_at >= date_trunc('month', now())" : '';
   const rows = await db.prepare(`
     SELECT u.id, u.username, u.full_name, u.avatar, u.college, u.year,
@@ -44,7 +44,7 @@ router.get('/leaderboard', requireAuth, async (req, res) => {
   })));
 });
 
-router.get('/users/:username/awards', requireAuth, async (req, res) => {
+router.get('/users/:username/awards', async (req, res) => {
   const rows = await db.prepare(`${AWARD_SELECT} WHERE u.username = ? ORDER BY a.created_at DESC, a.id DESC LIMIT 100`)
     .all(req.params.username);
   res.json(rows.map(shape));

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { Logo } from '../components/Layout';
 import { ToothIcon } from '../components/Icons';
@@ -7,6 +7,10 @@ import { ToothIcon } from '../components/Icons';
 export default function Auth({ mode }) {
   const { login, register } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  // Only follow same-site paths after logging in.
+  const next = /^\/(?!\/)/.test(params.get('next') || '') ? params.get('next') : '/';
+  const keep = params.get('next') ? `?next=${encodeURIComponent(next)}` : '';
   const [form, setForm] = useState({ username: '', password: '', full_name: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -20,7 +24,7 @@ export default function Auth({ mode }) {
     try {
       if (isLogin) await login(form.username, form.password);
       else await register(form);
-      navigate('/');
+      navigate(next, { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -52,9 +56,10 @@ export default function Auth({ mode }) {
         </form>
         <div className="auth-card auth-switch">
           {isLogin
-            ? <>Don&apos;t have an account? <Link to="/register">Sign up</Link></>
-            : <>Have an account? <Link to="/login">Log in</Link></>}
+            ? <>Don&apos;t have an account? <Link to={`/register${keep}`}>Sign up</Link></>
+            : <>Have an account? <Link to={`/login${keep}`}>Log in</Link></>}
         </div>
+        <Link to={next} className="auth-browse">← Continue browsing without an account</Link>
       </div>
     </div>
   );

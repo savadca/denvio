@@ -29,7 +29,7 @@ export default function Leaderboard() {
   const { user } = useAuth();
   const [period, setPeriod] = useState('all');
   const { data, loading } = useApi(`/leaderboard?period=${period}`);
-  const myIndex = data ? data.findIndex((e) => e.user.id === user.id) : -1;
+  const myIndex = data ? data.findIndex((e) => e.user.id === user?.id) : -1;
 
   return (
     <div className="narrow">
@@ -74,7 +74,7 @@ export default function Leaderboard() {
 
           <div className="card list">
             {data.slice(3).map((e, i) => (
-              <Link key={e.user.id} to={`/u/${e.user.username}`} className={`list-row leader-row ${e.user.id === user.id ? 'me' : ''}`} style={{ animationDelay: `${i * 0.04}s` }}>
+              <Link key={e.user.id} to={`/u/${e.user.username}`} className={`list-row leader-row ${e.user.id === user?.id ? 'me' : ''}`} style={{ animationDelay: `${i * 0.04}s` }}>
                 <span className="rank-num">{i + 4}</span>
                 <Avatar user={e.user} size={40} />
                 <span className="grow">

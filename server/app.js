@@ -52,7 +52,7 @@ app.use('/api', require('./routes/awards'));
 app.use('/api', require('./routes/announcements'));
 app.use('/api', require('./routes/news'));
 app.use('/api', require('./routes/jobs'));
-app.use('/api', require('./routes/papers'));
+app.use('/api', require('./routes/exams'));
 app.use('/api', require('./routes/errors'));
 app.use('/api', require('./routes/notifications'));
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));

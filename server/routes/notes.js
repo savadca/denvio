@@ -1,6 +1,6 @@
 const express = require('express');
 const { db, isTopic } = require('../db');
-const { requireAuth, cleanUrl, str, numericId } = require('../helpers');
+const { viewer, requireAuth, cleanUrl, str, numericId } = require('../helpers');
 const { presignedUpload, NOTE_TYPES, NOTE_MAX_BYTES, isBlobUrl, blobInfo, removeBlob } = require('../storage');
 const { countTiers } = require('../coins');
 
@@ -37,8 +37,8 @@ function canView(n, viewer) {
   return n.status === 'approved' || viewer.role === 'admin' || viewer.id === n.user_id;
 }
 
-router.get('/notes', requireAuth, async (req, res) => {
-  const me = req.user;
+router.get('/notes', async (req, res) => {
+  const me = viewer(req);
   const where = [];
   const params = [me.id, me.id];
   if (req.query.user) {
@@ -71,7 +71,7 @@ router.get('/notes', requireAuth, async (req, res) => {
 });
 
 // Approved-note counts per subject for the notes library.
-router.get('/notes/subjects', requireAuth, async (req, res) => {
+router.get('/notes/subjects', async (req, res) => {
   const rows = await db.prepare(`
     SELECT subject, COUNT(*) AS count, MAX(created_at) AS latest FROM notes
     WHERE status = 'approved' GROUP BY subject
@@ -79,10 +79,11 @@ router.get('/notes/subjects', requireAuth, async (req, res) => {
   res.json(Object.fromEntries(rows.map((r) => [r.subject, { count: r.count, latest: r.latest }])));
 });
 
-router.get('/notes/:id', requireAuth, async (req, res) => {
-  const n = await db.prepare(`${NOTE_SELECT} WHERE n.id = ?`).get(req.user.id, req.user.id, req.params.id);
-  if (!n || !canView(n, req.user)) return res.status(404).json({ error: 'Note not found' });
-  res.json(serialize(n, req.user));
+router.get('/notes/:id', async (req, res) => {
+  const me = viewer(req);
+  const n = await db.prepare(`${NOTE_SELECT} WHERE n.id = ?`).get(me.id, me.id, req.params.id);
+  if (!n || !canView(n, me)) return res.status(404).json({ error: 'Note not found' });
+  res.json(serialize(n, me));
 });
 
 // Step 1 of an upload: presigned URL for one file. The browser picks a unique name
@@ -101,7 +102,7 @@ router.post('/notes', requireAuth, async (req, res) => {
   const audio_url = cleanUrl(req.body.audio_url);
   const fileUrl = String(req.body.file_url || '');
   if (!title) return res.status(400).json({ error: 'Title is required' });
-  if (!isTopic(subject)) return res.status(400).json({ error: 'Choose a subject or exam' });
+  if (!(await isTopic(subject))) return res.status(400).json({ error: 'Choose a subject or exam' });
   if (!fileUrl && !video_url && !audio_url) return res.status(400).json({ error: 'Attach a file or add a video/audio link' });
   if (req.body.video_url && !video_url) return res.status(400).json({ error: 'Video link must start with http:// or https://' });
   if (req.body.audio_url && !audio_url) return res.status(400).json({ error: 'Audio link must start with http:// or https://' });

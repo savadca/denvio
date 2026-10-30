@@ -227,19 +227,24 @@ CREATE TABLE IF NOT EXISTS client_errors (
   last_seen TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Previous year question papers: admin-made exam categories → year → subject-wise papers.
-CREATE TABLE IF NOT EXISTS paper_exams (
+-- Exam Prep sections. Admins can add more; the built-in ones are seeded on first run.
+CREATE TABLE IF NOT EXISTS exams (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
+  kind TEXT NOT NULL DEFAULT 'india',        -- india | abroad | university | other
+  region TEXT NOT NULL DEFAULT 'india',      -- for the Notifications tab's official sources
   description TEXT DEFAULT '',
   emoji TEXT DEFAULT '',
   created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Previous year question papers: exam → (course year, for university exams) → calendar year → subject.
 CREATE TABLE IF NOT EXISTS papers (
   id SERIAL PRIMARY KEY,
-  exam_id INTEGER NOT NULL REFERENCES paper_exams(id) ON DELETE CASCADE,
+  exam_id INTEGER NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
+  course_year TEXT NOT NULL DEFAULT '',      -- e.g. First year; only used by university exams
+  predicted INTEGER NOT NULL DEFAULT 0,      -- 1 = predicted paper for an upcoming exam; year = that exam's year
   year INTEGER NOT NULL,
   subject TEXT NOT NULL,
   title TEXT NOT NULL,
@@ -257,8 +262,47 @@ CREATE INDEX IF NOT EXISTS awards_user ON awards (user_id);
 CREATE INDEX IF NOT EXISTS comments_post ON comments (post_id);
 `;
 
+const DEFAULT_EXAMS = [
+  ['NEET MDS', 'india', 'india', 'MDS entrance · India', '🎯'],
+  ['INI-CET (AIIMS)', 'india', 'india', 'AIIMS, PGIMER, JIPMER · India', '🏛️'],
+  ['ORE – UK', 'abroad', 'uk', 'Overseas Registration Exam', '🇬🇧'],
+  ['ADC – Australia', 'abroad', 'australia', 'Australian Dental Council', '🇦🇺'],
+  ['NDEB – Canada', 'abroad', 'canada', 'AFK · ACJ · NDECC', '🇨🇦'],
+  ['INBDE – USA', 'abroad', 'usa', 'Integrated National Board', '🇺🇸'],
+  ['Gulf – DHA / MOH', 'abroad', 'gulf', 'Dubai · UAE · Saudi · Qatar', '🇦🇪'],
+];
+
 async function init() {
   await pool.query(SCHEMA);
+  // Seed the built-in exams only into an empty table, so ones an admin deleted stay deleted.
+  const exams = await pool.query('SELECT 1 FROM exams LIMIT 1');
+  if (!exams.rows.length) {
+    for (const [name, kind, region, description, emoji] of DEFAULT_EXAMS) {
+      await pool.query(
+        'INSERT INTO exams (name, kind, region, description, emoji) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (name) DO NOTHING',
+        [name, kind, region, description, emoji],
+      );
+    }
+  }
+  // Upgrade from the first question-papers version, which kept its own `paper_exams` table:
+  // move those exams into `exams` and point their papers at them. The lock keeps two
+  // cold-starting instances from running this at the same time.
+  await pool.query(`
+    ALTER TABLE papers ADD COLUMN IF NOT EXISTS course_year TEXT NOT NULL DEFAULT '';
+    ALTER TABLE papers ADD COLUMN IF NOT EXISTS predicted INTEGER NOT NULL DEFAULT 0;
+    DO $$ BEGIN
+      PERFORM pg_advisory_xact_lock(727001);
+      IF to_regclass('public.paper_exams') IS NOT NULL THEN
+        INSERT INTO exams (name, kind, description, emoji, created_by, created_at)
+          SELECT name, 'other', description, emoji, created_by, created_at FROM paper_exams
+          ON CONFLICT (name) DO NOTHING;
+        ALTER TABLE papers DROP CONSTRAINT IF EXISTS papers_exam_id_fkey;
+        UPDATE papers p SET exam_id = e.id FROM paper_exams pe JOIN exams e ON e.name = pe.name WHERE p.exam_id = pe.id;
+        ALTER TABLE papers ADD CONSTRAINT papers_exam_id_fkey FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE;
+        DROP TABLE paper_exams;
+      END IF;
+    END $$;
+  `);
   // Seed the first admin account so the app is usable right away.
   const { rows } = await pool.query("SELECT 1 FROM users WHERE role = 'admin' LIMIT 1");
   if (!rows.length) {
@@ -289,12 +333,9 @@ const SUBJECTS = [
   'Orthodontics', 'Periodontics', 'Pedodontics', 'Public Health Dentistry',
 ];
 
-// Exam-prep sections (Indian PG entrance + international licensing exams).
-// Notes and mock tests can be filed under these just like a subject.
-const EXAMS = [
-  'NEET MDS', 'INI-CET (AIIMS)', 'ORE – UK', 'ADC – Australia', 'NDEB – Canada', 'INBDE – USA', 'Gulf – DHA / MOH',
-];
+// Exam-prep sections live in the `exams` table; notes and mock tests can be filed under
+// an exam's name just like a subject.
+const isExam = async (value) => !!value && !!(await db.prepare('SELECT 1 FROM exams WHERE name = ?').get(value));
+const isTopic = async (value) => SUBJECTS.includes(value) || isExam(value);
 
-const isTopic = (value) => SUBJECTS.includes(value) || EXAMS.includes(value);
-
-module.exports = { db, ready, SUBJECTS, EXAMS, isTopic };
+module.exports = { db, ready, SUBJECTS, isExam, isTopic };

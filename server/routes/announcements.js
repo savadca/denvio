@@ -1,6 +1,6 @@
 const express = require('express');
 const { db } = require('../db');
-const { requireAuth, requireAdmin, cleanUrl, str, numericId } = require('../helpers');
+const { requireAdmin, cleanUrl, str, numericId } = require('../helpers');
 
 const router = express.Router();
 router.param('id', numericId);
@@ -8,7 +8,7 @@ const TYPES = ['info', 'success', 'warning', 'urgent', 'event'];
 
 const LIVE = "active = 1 AND (expires_at IS NULL OR expires_at >= current_date)";
 
-router.get('/announcements', requireAuth, async (req, res) => {
+router.get('/announcements', async (req, res) => {
   res.json(await db.prepare(`SELECT * FROM announcements WHERE ${LIVE} ORDER BY id DESC LIMIT 10`).all());
 });
 

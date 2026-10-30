@@ -15,8 +15,10 @@ export function StatusBadge({ status }) {
 }
 
 export function NotePreview({ note, compact = false }) {
+  const { user } = useAuth();
   const kind = fileKind(note.file_mime);
-  if (note.has_file && kind === 'image') {
+  // Files are for signed-in users, so visitors see the title tile instead of the picture.
+  if (note.has_file && kind === 'image' && user) {
     return <img className="note-image" src={`/api/notes/${note.id}/file`} alt={note.title} loading="lazy" draggable="false" />;
   }
   return (
@@ -31,7 +33,7 @@ export function NotePreview({ note, compact = false }) {
 }
 
 export default function NoteCard({ note: initial, onDeleted }) {
-  const { user } = useAuth();
+  const { user, requireLogin } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const [note, setNote] = useState(initial);
@@ -40,11 +42,12 @@ export default function NoteCard({ note: initial, onDeleted }) {
   const [burst, setBurst] = useState(0);
   const lastTap = useRef(0);
   const tapTimer = useRef(null);
-  const isAdmin = user.role === 'admin';
-  const canDelete = isAdmin || user.id === note.user.id;
+  const isAdmin = user?.role === 'admin';
+  const canDelete = isAdmin || user?.id === note.user.id;
   const approved = note.status === 'approved';
 
   const toggle = async (what) => {
+    if (!requireLogin(`Sign up to ${what} notes.`)) return;
     try {
       const r = await api.post(`/notes/${note.id}/${what}`);
       setNote((n) => what === 'like'
@@ -107,7 +110,8 @@ export default function NoteCard({ note: initial, onDeleted }) {
           </button>
         )}
         {note.has_file && (
-          <a className="icon-btn" href={`/api/notes/${note.id}/file?download=1`} aria-label="Download">
+          <a className="icon-btn" href={`/api/notes/${note.id}/file?download=1`} aria-label="Download"
+            onClick={(e) => !requireLogin('Sign up for free to download notes.') && e.preventDefault()}>
             <DownloadIcon />
           </a>
         )}
@@ -150,7 +154,7 @@ export default function NoteCard({ note: initial, onDeleted }) {
           </div>
         )}
         {note.status !== 'approved' && note.admin_note && <p className="muted small">Admin: {note.admin_note}</p>}
-        {note.status !== 'approved' && user.id === note.user.id && (note.video_url || note.audio_url) && (
+        {note.status !== 'approved' && user?.id === note.user.id && (note.video_url || note.audio_url) && (
           <p className="muted small">Your video/audio links become visible to others once an admin enables them.</p>
         )}
       </div>

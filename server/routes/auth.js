@@ -1,6 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { db, SUBJECTS, EXAMS } = require('../db');
+const { db, SUBJECTS } = require('../db');
 const { publicUser, requireAuth, str } = require('../helpers');
 const { avatarUpload, saveAvatar, removeBlob } = require('../storage');
 const { coinSummary } = require('../coins');
@@ -9,7 +9,6 @@ const router = express.Router();
 const USERNAME_RE = /^[a-z0-9._]{3,24}$/i;
 
 router.get('/subjects', (req, res) => res.json(SUBJECTS));
-router.get('/exams', (req, res) => res.json(EXAMS));
 
 router.get('/auth/me', async (req, res) => {
   if (!req.user) return res.json({ user: null });
@@ -54,7 +53,7 @@ router.post('/auth/logout', async (req, res) => {
   res.json({ ok: true });
 });
 
-router.get('/users/:username', requireAuth, async (req, res) => {
+router.get('/users/:username', async (req, res) => {
   const u = await db.prepare('SELECT * FROM users WHERE username = ?').get(req.params.username);
   if (!u) return res.status(404).json({ error: 'User not found' });
   const counts = await db.prepare(`

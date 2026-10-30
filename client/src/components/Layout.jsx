@@ -8,7 +8,7 @@ import Modal from './Modal';
 import ErrorBoundary from './ErrorBoundary';
 import {
   HomeIcon, TestIcon, BookIcon, ChatIcon, ShieldIcon, LogoutIcon, SettingsIcon, ToothIcon, TrophyIcon,
-  NewsIcon, BriefcaseIcon, MenuIcon, GradIcon, MegaphoneIcon, PaperIcon,
+  NewsIcon, BriefcaseIcon, MenuIcon, GradIcon, MegaphoneIcon, UserIcon,
 } from './Icons';
 
 export function Logo({ className = '' }) {
@@ -20,14 +20,14 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
-  const isAdmin = user.role === 'admin';
+  const isAdmin = user?.role === 'admin';
+  const next = encodeURIComponent(pathname);
 
   // `dock` items appear in the phone's bottom dock; the rest live in the "More" sheet.
   const items = [
     { to: '/', label: 'Home', icon: HomeIcon, end: true, dock: true },
     { to: '/notes', label: 'Notes', icon: BookIcon, dock: true },
     { to: '/exams', label: 'Exam Prep', icon: GradIcon, dock: true },
-    { to: '/papers', label: 'Question Papers', icon: PaperIcon },
     { to: '/tests', label: 'Mock Tests', icon: TestIcon, dock: true },
     { to: '/jobs', label: 'Jobs', icon: BriefcaseIcon, dock: true },
     { to: '/notifications', label: 'Notifications', icon: MegaphoneIcon },
@@ -53,13 +53,28 @@ export default function Layout({ children }) {
               {({ isActive }) => (<><Icon filled={false} strokeWidth={isActive ? 2.6 : 2} /><span className="nav-label">{label}</span></>)}
             </NavLink>
           ))}
-          <NavLink to={`/u/${user.username}`} className="nav-item">
-            {({ isActive }) => (<><Avatar user={user} size={26} ring={isActive} /><span className="nav-label">Profile</span></>)}
-          </NavLink>
+          {user && (
+            <NavLink to={`/u/${user.username}`} className="nav-item">
+              {({ isActive }) => (<><Avatar user={user} size={26} ring={isActive} /><span className="nav-label">Profile</span></>)}
+            </NavLink>
+          )}
         </nav>
         <div className="sidebar-bottom">
-          <NavLink to="/settings" className="nav-item"><SettingsIcon /><span className="nav-label">Settings</span></NavLink>
-          <button className="nav-item" onClick={onLogout}><LogoutIcon /><span className="nav-label">Log out</span></button>
+          {user ? (
+            <>
+              <NavLink to="/settings" className="nav-item"><SettingsIcon /><span className="nav-label">Settings</span></NavLink>
+              <button className="nav-item" onClick={onLogout}><LogoutIcon /><span className="nav-label">Log out</span></button>
+            </>
+          ) : (
+            <>
+              <div className="sidebar-guest">
+                <p className="muted small">Sign up free to upload, download and take tests.</p>
+                <Link to={`/register?next=${next}`} className="btn btn-primary btn-block">Sign up</Link>
+                <Link to={`/login?next=${next}`} className="btn btn-block">Log in</Link>
+              </div>
+              <Link to={`/login?next=${next}`} className="nav-item sidebar-guest-icon" aria-label="Log in or sign up"><UserIcon /></Link>
+            </>
+          )}
         </div>
       </aside>
 
@@ -67,9 +82,11 @@ export default function Layout({ children }) {
         <Link to="/"><Logo /></Link>
         <div className="topbar-actions">
           <Link to="/notifications" aria-label="Notifications"><MegaphoneIcon /></Link>
-          <Link to="/leaderboard" aria-label="Leaderboard" className="topbar-points">
-            <TrophyIcon />{user.role !== 'admin' && <span>{user.points || 0}</span>}
-          </Link>
+          {user ? (
+            <Link to="/leaderboard" aria-label="Leaderboard" className="topbar-points">
+              <TrophyIcon />{!isAdmin && <span>{user.points || 0}</span>}
+            </Link>
+          ) : <Link to={`/login?next=${next}`} className="btn btn-sm btn-primary topbar-login">Log in</Link>}
           <button onClick={() => setMenuOpen(true)} aria-label="More" className="topbar-menu"><MenuIcon /></button>
         </div>
       </header>
@@ -78,7 +95,7 @@ export default function Layout({ children }) {
         <AnnouncementBar />
         <div className="page" key={pathname}><ErrorBoundary resetKey={pathname}>{children}</ErrorBoundary></div>
       </main>
-      <Celebration />
+      {user && <Celebration />}
 
       <nav className="bottombar">
         {items.filter((i) => i.dock).map(({ to, label, icon: Icon, end }) => (
@@ -86,21 +103,30 @@ export default function Layout({ children }) {
             {({ isActive }) => <Icon strokeWidth={isActive ? 2.6 : 2} />}
           </NavLink>
         ))}
-        <NavLink to={`/u/${user.username}`} aria-label="Profile">
-          {({ isActive }) => <Avatar user={user} size={26} ring={isActive} />}
-        </NavLink>
+        {user ? (
+          <NavLink to={`/u/${user.username}`} aria-label="Profile">
+            {({ isActive }) => <Avatar user={user} size={26} ring={isActive} />}
+          </NavLink>
+        ) : <NavLink to={`/login?next=${next}`} aria-label="Log in or sign up"><UserIcon /></NavLink>}
       </nav>
 
       <Modal open={menuOpen} onClose={() => setMenuOpen(false)} title="More" className="more-sheet">
         <div className="more-grid">
-          {[...items.filter((i) => !i.dock), { to: '/settings', label: 'Settings', icon: SettingsIcon }].map(({ to, label, icon: Icon }) => (
+          {[...items.filter((i) => !i.dock), ...(user ? [{ to: '/settings', label: 'Settings', icon: SettingsIcon }] : [])].map(({ to, label, icon: Icon }) => (
             <Link key={to} to={to} className="more-item" onClick={() => setMenuOpen(false)}>
               <span className="more-icon"><Icon size={22} /></span>
               <span>{label}</span>
             </Link>
           ))}
         </div>
-        <button className="btn btn-block btn-danger-ghost" onClick={onLogout}><LogoutIcon size={18} /> Log out</button>
+        {user
+          ? <button className="btn btn-block btn-danger-ghost" onClick={onLogout}><LogoutIcon size={18} /> Log out</button>
+          : (
+            <div className="row gap">
+              <Link to={`/register?next=${next}`} className="btn btn-primary grow" onClick={() => setMenuOpen(false)}>Sign up</Link>
+              <Link to={`/login?next=${next}`} className="btn grow" onClick={() => setMenuOpen(false)}>Log in</Link>
+            </div>
+          )}
       </Modal>
     </div>
   );

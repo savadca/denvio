@@ -22,6 +22,10 @@ async function loadUser(req, res, next) {
   next();
 }
 
+// Visitors can browse without an account; public routes read the viewer through this.
+const GUEST = Object.freeze({ id: 0, role: 'guest' });
+const viewer = (req) => req.user || GUEST;
+
 function requireAuth(req, res, next) {
   if (!req.user) return res.status(401).json({ error: 'Please log in' });
   next();
@@ -54,4 +58,4 @@ function numericId(req, res, next, id) {
   res.status(404).json({ error: 'Not found' });
 }
 
-module.exports = { publicUser, loadUser, requireAuth, requireAdmin, cleanUrl, str, numericId };
+module.exports = { publicUser, loadUser, viewer, requireAuth, requireAdmin, cleanUrl, str, numericId };

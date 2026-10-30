@@ -24,9 +24,9 @@ Optional live job listings: get a free key at https://developer.adzuna.com and s
 
 ## Features
 
-- **Accounts** – username/password login, `user` and `admin` roles, profile page with avatar, bio, college, year.
+- **Accounts** – visitors can browse everything (notes, exam prep, question paper lists, mock test list, community, news, jobs, leaderboard, profiles) without an account. Signing up (username/password) is needed to upload, view or download files, like/save, take tests, post, reply and report; visitors see a "Sign up" prompt and come back to the same page after logging in. `user` and `admin` roles, profile page with avatar, bio, college, year.
 - **Notes** – upload PDF/image/Word/PowerPoint/text (25 MB) with optional video and audio links. Several files can be picked at once; each becomes its own note with its own title. Uploads go to an admin review queue and only appear in the feed once approved. Like, save, download.
-- **Question papers** – previous year papers organised as exam → year → subject. Only admins can create exam categories (name, emoji, description), add years and upload papers (several files at once, each with its own title); everyone can view and download.
+- **Exam Prep** – each exam has Notes, Question papers, Mock tests and Notifications tabs. Admins can add new exams (India PG entrance, abroad licensing, university or other), edit and delete them. *Question papers* are organised year → subject; university exams first pick the course year (First/Second/Third/Final year or a custom one). Subjects and course years come from a list with an "Other" option to type your own. Admins upload several files at once; everyone can view and download. Admins can also upload *predicted papers* for an upcoming exam year; these appear in a glowing area at the top of the tab, and the exam card, header and tab are highlighted while any exist.
 - **Video/audio** – a "View video" / "Listen audio" button appears only if the uploader added a link *and* an admin enabled it. The player loads only when clicked (YouTube, Vimeo, Google Drive, Spotify, SoundCloud, direct .mp4/.mp3).
 - **Mock tests** – admins build subject-wise MCQ tests with explanations; students take timed tests and review results.
 - **Community** – discussions by subject with replies; report posts, comments or users.

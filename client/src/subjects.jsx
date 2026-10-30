@@ -19,8 +19,13 @@ function useCachedList(url) {
 // BDS subjects.
 export const useSubjects = () => useCachedList('/subjects');
 
-// Exam-prep sections: NEET MDS, INI-CET and international licensing exams.
+// Exam-prep sections (admins can add more): NEET MDS, INI-CET, licensing exams abroad, university exams.
 export const useExams = () => useCachedList('/exams');
+
+// Call after an admin adds, renames or deletes an exam so dropdowns opened later reload it.
+export const refreshExams = () => {
+  delete cache['/exams'];
+};
 
 // Options for a "subject" dropdown. only="subjects" | "exams" limits the list;
 // by default both are shown in two groups (used for mock tests).

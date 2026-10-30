@@ -1,6 +1,6 @@
 const express = require('express');
 const { db } = require('../db');
-const { requireAuth, requireAdmin, cleanUrl, str, numericId } = require('../helpers');
+const { requireAdmin, cleanUrl, str, numericId } = require('../helpers');
 
 const router = express.Router();
 router.param('id', numericId);
@@ -74,7 +74,7 @@ async function liveJobs({ classification, type, q, location }) {
   }
 }
 
-router.get('/jobs/meta', requireAuth, async (req, res) => {
+router.get('/jobs/meta', async (req, res) => {
   res.json({
     classifications: CLASSIFICATIONS.map(({ id, label, keywords }) => ({ id, label, keyword: keywords[0] })),
     types: JOB_TYPES,
@@ -82,7 +82,7 @@ router.get('/jobs/meta', requireAuth, async (req, res) => {
   });
 });
 
-router.get('/jobs', requireAuth, async (req, res) => {
+router.get('/jobs', async (req, res) => {
   const filters = {
     classification: byId[req.query.classification] ? req.query.classification : '',
     type: JOB_TYPES[req.query.type] ? req.query.type : '',

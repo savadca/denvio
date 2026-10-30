@@ -115,7 +115,7 @@ function Results() {
 
 export default function Profile() {
   const { username } = useParams();
-  const { user: me } = useAuth();
+  const { user: me, requireLogin } = useAuth();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
   const { data, error, loading, reload } = useApi(`/users/${username}`);
@@ -126,8 +126,8 @@ export default function Profile() {
   if (error) return <div className="empty"><h3>{error.message}</h3></div>;
 
   const { user, counts, coins, points } = data;
-  const isMe = me.id === user.id;
-  const isAdmin = me.role === 'admin';
+  const isMe = me?.id === user.id;
+  const isAdmin = me?.role === 'admin';
   const tabs = [
     { id: 'notes', label: 'Notes', icon: GridIcon },
     ...(isMe ? [
@@ -140,6 +140,7 @@ export default function Profile() {
   const tab = tabs.some((t) => t.id === params.get('tab')) ? params.get('tab') : 'notes';
 
   const report = async () => {
+    if (!requireLogin(`Sign up to report @${user.username}.`)) return;
     const reason = prompt(`Why are you reporting @${user.username}?`);
     if (!reason) return;
     setReporting(true);

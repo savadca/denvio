@@ -1,13 +1,13 @@
 const express = require('express');
 const { db } = require('../db');
-const { requireAuth, numericId } = require('../helpers');
+const { viewer, requireAuth, numericId } = require('../helpers');
 
 const router = express.Router();
 router.param('id', numericId);
 const OPTIONS = ['a', 'b', 'c', 'd'];
 
-router.get('/tests', requireAuth, async (req, res) => {
-  const params = [req.user.id];
+router.get('/tests', async (req, res) => {
+  const params = [viewer(req).id];
   let where = 'WHERE t.published = 1';
   if (req.query.subject) {
     where += ' AND t.subject = ?';

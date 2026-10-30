@@ -148,17 +148,17 @@ router.get('/admin/tests', async (req, res) => {
   `).all());
 });
 
-function testFields(body) {
+async function testFields(body) {
   const title = str(body.title, 120);
   const subject = str(body.subject, 80);
   if (!title) return { error: 'Title is required' };
-  if (!isTopic(subject)) return { error: 'Choose a subject or exam' };
+  if (!(await isTopic(subject))) return { error: 'Choose a subject or exam' };
   const duration = Math.min(Math.max(parseInt(body.duration_min, 10) || 15, 1), 240);
   return { title, subject, description: str(body.description, 500), duration };
 }
 
 router.post('/admin/tests', async (req, res) => {
-  const f = testFields(req.body);
+  const f = await testFields(req.body);
   if (f.error) return res.status(400).json(f);
   const { lastInsertRowid } = await db.prepare(
     'INSERT INTO tests (title, subject, description, duration_min, created_by) VALUES (?, ?, ?, ?, ?)',
@@ -176,7 +176,7 @@ router.get('/admin/tests/:id', async (req, res) => {
 router.put('/admin/tests/:id', async (req, res) => {
   const t = await db.prepare('SELECT * FROM tests WHERE id = ?').get(req.params.id);
   if (!t) return res.status(404).json({ error: 'Test not found' });
-  const f = testFields({ ...t, ...req.body });
+  const f = await testFields({ ...t, ...req.body });
   if (f.error) return res.status(400).json(f);
   const published = req.body.published !== undefined ? flag(req.body.published) : t.published;
   await db.prepare('UPDATE tests SET title = ?, subject = ?, description = ?, duration_min = ?, published = ? WHERE id = ?')

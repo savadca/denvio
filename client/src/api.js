@@ -11,7 +11,7 @@ async function request(method, url, body) {
   const res = await fetch('/api' + url, opts);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    if (res.status === 401) window.dispatchEvent(new Event('denvio:unauth'));
+    if (res.status === 401) window.dispatchEvent(new CustomEvent('denvio:unauth', { detail: { method } }));
     const err = new Error(data.error || 'Request failed');
     err.status = res.status;
     throw err;

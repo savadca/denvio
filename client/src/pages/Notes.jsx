@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { useApi } from '../api';
+import { useAuth } from '../auth';
 import { useSubjects } from '../subjects';
 import NoteCard from '../components/NoteCard';
 import UploadNotesModal from '../components/UploadNotesModal';
@@ -52,10 +53,11 @@ export function NotesGrid({ url, emptyText, onUpload }) {
 }
 
 export default function Notes() {
+  const { user, requireLogin } = useAuth();
   const subjects = useSubjects();
   const [params, setParams] = useSearchParams();
   const subject = params.get('subject') || '';
-  const uploadOpen = params.get('upload') === '1';
+  const uploadOpen = params.get('upload') === '1' && !!user;
   const [query, setQuery] = useState('');
   const [q, setQ] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
@@ -68,6 +70,12 @@ export default function Notes() {
   useEffect(() => {
     setQuery('');
   }, [subject]);
+  // A visitor followed an "Upload" link: explain that uploading needs an account.
+  useEffect(() => {
+    if (user || params.get('upload') !== '1') return;
+    requireLogin('Sign up for free to share your notes.');
+    update({ upload: '' });
+  }, [user, params]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = (changes) => {
     const next = new URLSearchParams(params);
@@ -75,7 +83,7 @@ export default function Notes() {
     setParams(next, { replace: isUploadToggle(changes) });
   };
   const openSubject = (s) => update({ subject: s });
-  const openUpload = () => update({ upload: '1' });
+  const openUpload = () => requireLogin('Sign up for free to share your notes.') && update({ upload: '1' });
   const total = subjects.reduce((sum, s) => sum + (stats.data?.[s]?.count || 0), 0);
   const matches = (s) => !q || subject || s.toLowerCase().includes(q.toLowerCase());
   const visibleSubjects = subjects.filter(matches);

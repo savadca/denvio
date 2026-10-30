@@ -1,5 +1,4 @@
 const express = require('express');
-const { requireAuth } = require('../helpers');
 
 const router = express.Router();
 
@@ -71,7 +70,7 @@ async function refresh() {
   return cache;
 }
 
-router.get('/news', requireAuth, async (req, res) => {
+router.get('/news', async (req, res) => {
   if (Date.now() - cache.at > CACHE_MS) {
     inflight = inflight || refresh().finally(() => { inflight = null; });
     await inflight;

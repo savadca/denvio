@@ -13,9 +13,21 @@ function RedlistBanner() {
   return <div className="banner">Your account is red-listed by an admin. You can read discussions but can’t post or reply right now.</div>;
 }
 
+function GuestComposer({ text }) {
+  const { promptLogin } = useAuth();
+  return (
+    <div className="card guest-cta">
+      <span className="grow">{text}</span>
+      <button className="btn btn-primary btn-sm" onClick={() => promptLogin('Sign up for free to join the discussion.')}>Sign up</button>
+    </div>
+  );
+}
+
 function useReport() {
   const toast = useToast();
+  const { requireLogin } = useAuth();
   return async (payload) => {
+    if (!requireLogin('Sign up to report content to the admins.')) return;
     const reason = prompt('What is wrong with this content?');
     if (!reason) return;
     try {
@@ -56,7 +68,7 @@ export function Community() {
   return (
     <div className="narrow">
       <h1 className="page-title">Community</h1>
-      {user.redlisted ? <RedlistBanner /> : (
+      {!user ? <GuestComposer text="Have a doubt? Sign up to ask it and reply to discussions." /> : user.redlisted ? <RedlistBanner /> : (
         <form className="card composer" onSubmit={post}>
           <Avatar user={user} size={40} />
           <div className="grow">
@@ -84,8 +96,8 @@ export function Community() {
           <header className="post-head">
             <UserLine user={p.user} sub={`${p.subject || 'General'} · ${timeAgo(p.created_at)}`} />
             <div className="row">
-              {user.role === 'admin' && p.user.id !== user.id && <button className="icon-btn award-btn" onClick={() => setAwardFor(p)} aria-label="Award a coin"><CoinIcon size={20} /></button>}
-              {p.user.id !== user.id && <button className="icon-btn" onClick={() => report({ post_id: p.id })} aria-label="Report"><FlagIcon size={18} /></button>}
+              {user?.role === 'admin' && p.user.id !== user.id && <button className="icon-btn award-btn" onClick={() => setAwardFor(p)} aria-label="Award a coin"><CoinIcon size={20} /></button>}
+              {p.user.id !== user?.id && <button className="icon-btn" onClick={() => report({ post_id: p.id })} aria-label="Report"><FlagIcon size={18} /></button>}
             </div>
           </header>
           <Link to={`/community/${p.id}`} className="thread-body pre">{p.body}</Link>
@@ -113,7 +125,7 @@ export function Thread() {
   if (loading && !p) return <div className="narrow"><div className="card skeleton" /></div>;
   if (error) return <div className="empty"><h3>{error.message}</h3></div>;
 
-  const canMod = (owner) => owner.id === user.id || user.role === 'admin';
+  const canMod = (owner) => !!user && (owner.id === user.id || user.role === 'admin');
 
   const reply = async (e) => {
     e.preventDefault();
@@ -143,8 +155,8 @@ export function Thread() {
         <header className="post-head">
           <UserLine user={p.user} sub={`${p.subject || 'General'} · ${timeAgo(p.created_at)}`} />
           <div className="row">
-            {user.role === 'admin' && p.user.id !== user.id && <button className="icon-btn award-btn" onClick={() => setAwarding(true)} aria-label="Award a coin"><CoinIcon size={20} /></button>}
-            {p.user.id !== user.id && <button className="icon-btn" onClick={() => report({ post_id: p.id })} aria-label="Report"><FlagIcon size={18} /></button>}
+            {user?.role === 'admin' && p.user.id !== user.id && <button className="icon-btn award-btn" onClick={() => setAwarding(true)} aria-label="Award a coin"><CoinIcon size={20} /></button>}
+            {p.user.id !== user?.id && <button className="icon-btn" onClick={() => report({ post_id: p.id })} aria-label="Report"><FlagIcon size={18} /></button>}
             {canMod(p.user) && <button className="icon-btn" onClick={() => remove(`/posts/${p.id}`, () => navigate('/community'))} aria-label="Delete"><TrashIcon size={18} /></button>}
           </div>
         </header>
@@ -161,7 +173,7 @@ export function Thread() {
                 <p><Link to={`/u/${c.user.username}`} className="strong">{c.user.username}</Link> <span className="pre">{c.body}</span></p>
                 <div className="comment-meta">
                   <span>{timeAgo(c.created_at)}</span>
-                  {c.user.id !== user.id && <button onClick={() => report({ comment_id: c.id })}>Report</button>}
+                  {c.user.id !== user?.id && <button onClick={() => report({ comment_id: c.id })}>Report</button>}
                   {canMod(c.user) && <button onClick={() => remove(`/comments/${c.id}`, reload)}>Delete</button>}
                 </div>
               </div>
@@ -169,7 +181,7 @@ export function Thread() {
           ))}
         </div>
 
-        {user.redlisted ? <RedlistBanner /> : (
+        {!user ? <GuestComposer text="Sign up to reply to this discussion." /> : user.redlisted ? <RedlistBanner /> : (
           <form className="reply" onSubmit={reply}>
             <input value={body} onChange={(e) => setBody(e.target.value)} placeholder="Add a reply…" maxLength={1000} />
             <button className="link-btn strong" disabled={!body.trim()}>Post</button>

@@ -67,7 +67,7 @@ export function TestCard({ test: t, index = 0 }) {
 
 export function TestList() {
   const { user } = useAuth();
-  const isAdmin = user.role === 'admin';
+  const isAdmin = user?.role === 'admin';
   const subjects = useSubjects();
   const exams = useExams();
   const [topic, setTopic] = useState('');

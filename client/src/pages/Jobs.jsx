@@ -124,7 +124,7 @@ export default function Jobs() {
         ))}
       </div>
 
-      {!m.live_enabled && user.role === 'admin' && (
+      {!m.live_enabled && user?.role === 'admin' && (
         <div className="banner banner-info">
           <b>Live market jobs are off.</b> Get a free API key at developer.adzuna.com, then start the server with
           <code> ADZUNA_APP_ID</code> and <code>ADZUNA_APP_KEY</code> set to show live dental openings here. You can also post jobs from Admin → Jobs.

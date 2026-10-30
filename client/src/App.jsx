@@ -12,7 +12,6 @@ import Leaderboard from './pages/Leaderboard';
 import News from './pages/News';
 import Jobs from './pages/Jobs';
 import ExamPrep from './pages/ExamPrep';
-import Papers from './pages/Papers';
 import Notifications from './pages/Notifications';
 import { TestList, TakeTest, Result } from './pages/Tests';
 import { Community, Thread } from './pages/Community';
@@ -47,40 +46,46 @@ export default function App() {
 
   if (user === undefined) return <Splash />;
 
-  if (!user) {
-    return (
-      <Routes>
-        <Route path="/register" element={<Auth mode="register" />} />
-        <Route path="*" element={<Auth mode="login" />} />
-      </Routes>
-    );
-  }
-
-  const isAdmin = user.role === 'admin';
+  const isAdmin = user?.role === 'admin';
+  // Pages that only make sense with an account send visitors to log in, then back here.
+  const member = (element) => (user ? element : <ToLogin />);
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Feed />} />
-        <Route path="/notes" element={<Notes />} />
-        <Route path="/upload" element={<Navigate to="/notes?upload=1" replace />} />
-        <Route path="/notes/:id" element={<NoteDetail />} />
-        <Route path="/u/:username" element={<Profile />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/tests" element={<TestList />} />
-        <Route path="/tests/:id" element={<TakeTest />} />
-        <Route path="/results/:id" element={<Result />} />
-        <Route path="/community" element={<Community />} />
-        <Route path="/community/:id" element={<Thread />} />
-        <Route path="/leaderboard" element={<Leaderboard />} />
-        <Route path="/news" element={<News />} />
-        <Route path="/jobs" element={<Jobs />} />
-        <Route path="/exams" element={<ExamPrep />} />
-        <Route path="/papers" element={<Papers />} />
-        <Route path="/notifications" element={<Notifications />} />
-        {isAdmin && <Route path="/admin" element={<Admin />} />}
-        {isAdmin && <Route path="/admin/tests/:id" element={<TestEditor />} />}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Layout>
+    <Routes>
+      <Route path="/login" element={user ? <Navigate to="/" replace /> : <Auth mode="login" />} />
+      <Route path="/register" element={user ? <Navigate to="/" replace /> : <Auth mode="register" />} />
+      <Route path="*" element={<Layout><MainRoutes isAdmin={isAdmin} member={member} /></Layout>} />
+    </Routes>
+  );
+}
+
+function ToLogin() {
+  const { pathname, search } = useLocation();
+  return <Navigate to={`/login?next=${encodeURIComponent(pathname + search)}`} replace />;
+}
+
+function MainRoutes({ isAdmin, member }) {
+  return (
+    <Routes>
+      <Route path="/" element={<Feed />} />
+      <Route path="/notes" element={<Notes />} />
+      <Route path="/upload" element={member(<Navigate to="/notes?upload=1" replace />)} />
+      <Route path="/notes/:id" element={<NoteDetail />} />
+      <Route path="/u/:username" element={<Profile />} />
+      <Route path="/settings" element={member(<Settings />)} />
+      <Route path="/tests" element={<TestList />} />
+      <Route path="/tests/:id" element={member(<TakeTest />)} />
+      <Route path="/results/:id" element={member(<Result />)} />
+      <Route path="/community" element={<Community />} />
+      <Route path="/community/:id" element={<Thread />} />
+      <Route path="/leaderboard" element={<Leaderboard />} />
+      <Route path="/news" element={<News />} />
+      <Route path="/jobs" element={<Jobs />} />
+      <Route path="/exams" element={<ExamPrep />} />
+      <Route path="/papers" element={<Navigate to="/exams" replace />} />
+      <Route path="/notifications" element={<Notifications />} />
+      {isAdmin && <Route path="/admin" element={<Admin />} />}
+      {isAdmin && <Route path="/admin/tests/:id" element={<TestEditor />} />}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
