@@ -14,6 +14,11 @@ const MIN_YEAR = 1990;
 // Predicted papers are for upcoming exams, so they may be a few years ahead.
 const maxYear = (predicted) => new Date().getFullYear() + (predicted ? 3 : 1);
 const MAX_FILES = 20;
+const MAX_COURSE_YEARS = 10;
+
+// University exams split papers by year of study: "1st year students" … "Nth year students".
+const ordinal = (n) => `${n}${{ 1: 'st', 2: 'nd', 3: 'rd' }[n] || 'th'}`; // n is 1–10
+const courseYearLabels = (count) => Array.from({ length: count }, (_, i) => `${ordinal(i + 1)} year students`);
 
 function cleanYear(value, predicted) {
   const y = Number(value);
@@ -63,6 +68,7 @@ function examFields(body) {
     region: REGIONS.includes(body.region) ? body.region : kind === 'abroad' ? 'other' : 'india',
     description: str(body.description, 300),
     emoji: str(body.emoji, 8),
+    course_years: Math.min(Math.max(parseInt(body.course_years, 10) || 4, 1), MAX_COURSE_YEARS),
   };
 }
 
@@ -74,8 +80,8 @@ router.post('/admin/exams', requireAdmin, async (req, res) => {
   const f = examFields(req.body);
   if (f.error) return res.status(400).json(f);
   if (await nameTaken(f.name)) return res.status(400).json({ error: 'An exam with this name already exists' });
-  const { lastInsertRowid } = await db.prepare('INSERT INTO exams (name, kind, region, description, emoji, created_by) VALUES (?, ?, ?, ?, ?, ?)')
-    .run(f.name, f.kind, f.region, f.description, f.emoji, req.user.id);
+  const { lastInsertRowid } = await db.prepare('INSERT INTO exams (name, kind, region, description, emoji, course_years, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(f.name, f.kind, f.region, f.description, f.emoji, f.course_years, req.user.id);
   res.status(201).json({ id: Number(lastInsertRowid), name: f.name });
 });
 
@@ -85,8 +91,8 @@ router.put('/admin/exams/:id', requireAdmin, async (req, res) => {
   const f = examFields(req.body);
   if (f.error) return res.status(400).json(f);
   if (await nameTaken(f.name, exam.id)) return res.status(400).json({ error: 'An exam with this name already exists' });
-  await db.prepare('UPDATE exams SET name = ?, kind = ?, region = ?, description = ?, emoji = ? WHERE id = ?')
-    .run(f.name, f.kind, f.region, f.description, f.emoji, exam.id);
+  await db.prepare('UPDATE exams SET name = ?, kind = ?, region = ?, description = ?, emoji = ?, course_years = ? WHERE id = ?')
+    .run(f.name, f.kind, f.region, f.description, f.emoji, f.course_years, exam.id);
   // Notes, tests and notifications point at the exam by name, so carry them over on a rename.
   if (f.name !== exam.name) {
     await db.prepare('UPDATE notes SET subject = ? WHERE subject = ?').run(f.name, exam.name);
@@ -115,10 +121,12 @@ router.post('/papers/upload', presignedUpload({
 
 // Saves one or more already-uploaded files as papers for the same exam, course year, year and subject.
 router.post('/admin/papers', requireAdmin, async (req, res) => {
-  const exam = await db.prepare('SELECT id, kind FROM exams WHERE id = ?').get(Number(req.body.exam_id) || 0);
+  const exam = await db.prepare('SELECT id, kind, course_years FROM exams WHERE id = ?').get(Number(req.body.exam_id) || 0);
   if (!exam) return res.status(400).json({ error: 'Choose an exam' });
   const courseYear = exam.kind === 'university' ? str(req.body.course_year, 40) : '';
-  if (exam.kind === 'university' && !courseYear) return res.status(400).json({ error: 'Choose the course year (e.g. First year)' });
+  if (exam.kind === 'university' && !courseYearLabels(exam.course_years).includes(courseYear)) {
+    return res.status(400).json({ error: 'Choose the course year (e.g. 1st year students)' });
+  }
   const predicted = req.body.predicted ? 1 : 0;
   const year = cleanYear(req.body.year, predicted);
   if (!year) return res.status(400).json({ error: `Choose a year between ${MIN_YEAR} and ${maxYear(predicted)}` });

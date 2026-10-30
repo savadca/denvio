@@ -13,11 +13,15 @@ const thisYear = new Date().getFullYear();
 const YEARS = Array.from({ length: thisYear + 2 - 1990 }, (_, i) => thisYear + 1 - i);
 const UPCOMING_YEARS = [0, 1, 2, 3].map((i) => thisYear + i); // for predicted papers
 const isNew = (date) => Date.now() - new Date(date).getTime() < 14 * 24 * 60 * 60 * 1000;
-export const COURSE_YEARS = ['First year', 'Second year', 'Third year', 'Final year'];
+// University exams split papers by year of study; the admin sets how many years the course has.
+// Must match courseYearLabels in server/routes/exams.js.
+const MAX_COURSE_YEARS = 10;
+const ordinal = (n) => `${n}${{ 1: 'st', 2: 'nd', 3: 'rd' }[n] || 'th'}`;
+export const courseYearLabels = (count) => Array.from({ length: count || 4 }, (_, i) => `${ordinal(i + 1)} year students`);
 export const EXAM_KINDS = [
   { id: 'india', label: '🇮🇳 India — PG entrance' },
   { id: 'abroad', label: '🌍 Abroad — licensing exams' },
-  { id: 'university', label: '🎓 University exams' },
+  { id: 'university', label: '🎓 University exams (course-wise)' },
   { id: 'other', label: '📚 Other exams' },
 ];
 const OTHER = '__other';
@@ -48,7 +52,7 @@ export function ExamFormModal({ exam, defaultKind = 'india', onClose, onSaved })
   const toast = useToast();
   const [form, setForm] = useState({
     name: exam?.name || '', kind: exam?.kind || defaultKind, region: exam?.region || 'india',
-    emoji: exam?.emoji || '', description: exam?.description || '',
+    emoji: exam?.emoji || '', description: exam?.description || '', course_years: exam?.course_years || 4,
   });
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
@@ -86,7 +90,19 @@ export function ExamFormModal({ exam, defaultKind = 'india', onClose, onSaved })
             {REGIONS.map((r) => <option key={r.id} value={r.id}>{r.flag} {r.label}</option>)}
           </select>
         </label>
-        {form.kind === 'university' && <p className="muted small">University exams get course years (First, Second, Third, Final year) before calendar years.</p>}
+        {form.kind === 'university' && (
+          <div className="fieldset">
+            <label>How many course years?
+              <select value={form.course_years} onChange={(e) => setForm({ ...form, course_years: Number(e.target.value) })}>
+                {Array.from({ length: MAX_COURSE_YEARS }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n} {n === 1 ? 'year' : 'years'}</option>)}
+              </select>
+            </label>
+            <div className="chips-wrap" aria-label="Course years">
+              {courseYearLabels(form.course_years).map((c) => <span key={c} className="chip">{c}</span>)}
+            </div>
+            <p className="muted small">Question papers are uploaded and browsed by course year, then exam year, then subject. Competitive exams like NEET MDS skip the course year.</p>
+          </div>
+        )}
         {exam && exam.name !== form.name.trim() && form.name.trim() && <p className="muted small">Notes, mock tests and notifications filed under “{exam.name}” move to the new name.</p>}
         <button className="btn btn-primary btn-block" disabled={busy || !form.name.trim()}>{busy ? 'Saving…' : exam ? 'Save changes' : 'Add exam'}</button>
       </form>
@@ -146,7 +162,12 @@ function AddPapersModal({ exam, defaults, courseYears, subjects, onClose, onAdde
         </div>
         <div className="form-grid">
           {university && (
-            <SelectOrType label="Course year" value={courseYear} onChange={setCourseYear} options={courseYears} placeholder="e.g. Internship, Part 1" disabled={busy} maxLength={40} />
+            <label>Course year
+              <select value={courseYear} onChange={(e) => setCourseYear(e.target.value)} required disabled={busy}>
+                <option value="">Select course year…</option>
+                {courseYears.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
           )}
           <label>{predicted ? 'Predicted for exam year' : 'Year of exam'}
             <select value={year} onChange={(e) => setYear(e.target.value)} required disabled={busy}>
@@ -254,10 +275,7 @@ export default function ExamPapers({ exam, cy, year, go, isAdmin, onChange }) {
   const papers = all.filter((p) => !p.predicted);
   const predicted = all.filter((p) => p.predicted);
 
-  const courseYears = useMemo(() => {
-    const custom = papers.map((p) => p.course_year).filter((c) => c && !COURSE_YEARS.includes(c));
-    return [...COURSE_YEARS, ...new Set(custom)];
-  }, [papers]);
+  const courseYears = useMemo(() => courseYearLabels(exam.course_years), [exam.course_years]);
   const examSubjects = useMemo(() => [...new Set(all.map((p) => p.subject))].sort(), [all]);
 
   if (error) return <p className="form-error">{error.message}</p>;
@@ -291,8 +309,7 @@ export default function ExamPapers({ exam, cy, year, go, isAdmin, onChange }) {
           onAdd={() => setAdding({ predicted: true, course_year: currentCy })} />
       )}
       {university && (
-        <Pills label="Course year" items={courseYears} current={currentCy} onPick={(c) => go({ cy: c, year: '' })}
-          addLabel="Other" onAdd={isAdmin ? () => add({ course_year: '', year: '' }) : null} />
+        <Pills label="Course year" items={courseYears} current={currentCy} onPick={(c) => go({ cy: c, year: '' })} />
       )}
       {(years.length > 0 || isAdmin) && (
         <Pills label="Year" items={years} current={currentYear} onPick={(y) => go({ year: String(y) })}

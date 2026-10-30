@@ -233,6 +233,7 @@ CREATE TABLE IF NOT EXISTS exams (
   name TEXT NOT NULL UNIQUE,
   kind TEXT NOT NULL DEFAULT 'india',        -- india | abroad | university | other
   region TEXT NOT NULL DEFAULT 'india',      -- for the Notifications tab's official sources
+  course_years INTEGER NOT NULL DEFAULT 4,   -- university exams: how many years the course has
   description TEXT DEFAULT '',
   emoji TEXT DEFAULT '',
   created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -290,6 +291,7 @@ async function init() {
   await pool.query(`
     ALTER TABLE papers ADD COLUMN IF NOT EXISTS course_year TEXT NOT NULL DEFAULT '';
     ALTER TABLE papers ADD COLUMN IF NOT EXISTS predicted INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE exams ADD COLUMN IF NOT EXISTS course_years INTEGER NOT NULL DEFAULT 4;
     DO $$ BEGIN
       PERFORM pg_advisory_xact_lock(727001);
       IF to_regclass('public.paper_exams') IS NOT NULL THEN
