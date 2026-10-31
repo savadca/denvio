@@ -10,6 +10,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <title>Denvio</title>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9500543694868925"
+     crossorigin="anonymous"></script>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦷</text></svg>" />
     <style>
       /* Boot screen: visible until React mounts, so the page is never just blank. */
@@ -42,7 +45,11 @@
         }
         window.addEventListener('error', function (e) {
           if (e.message) show('Error: ' + e.message + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : ''));
-          else if (e.target && (e.target.src || e.target.href)) show('Could not load ' + (e.target.src || e.target.href));
+          else if (e.target && (e.target.src || e.target.href)) {
+            var url = e.target.src || e.target.href;
+            // Ad blockers often block the AdSense script; the app works fine without it.
+            if (url.indexOf('googlesyndication.com') === -1) show('Could not load ' + url);
+          }
         }, true);
         window.addEventListener('unhandledrejection', function (e) {
           show('Error: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
