@@ -7,6 +7,7 @@ import { useSubjects, useExams, TopicOptions } from '../subjects';
 import Modal from '../components/Modal';
 import { ClockIcon, CheckIcon, XIcon, PlusIcon, TestIcon, ChevronLeftIcon, ChevronRightIcon, GridIcon } from '../components/Icons';
 import { subjectHue, subjectEmoji } from '../utils';
+import Avatar from '../components/Avatar';
 
 const OPTIONS = ['a', 'b', 'c', 'd'];
 
@@ -50,9 +51,11 @@ function CreateTestModal({ onClose }) {
 }
 
 export function TestCard({ test: t, index = 0 }) {
+  const draft = t.published === 0 || t.question_count === 0;
   return (
-    <Link to={`/tests/${t.id}`} className="card test-card note-in" style={{ '--h': subjectHue(t.subject), animationDelay: `${Math.min(index, 8) * 0.04}s` }}>
+    <Link to={draft ? `/admin/tests/${t.id}` : `/tests/${t.id}`} className={`card test-card note-in ${draft ? 'test-draft' : ''}`} style={{ '--h': subjectHue(t.subject), animationDelay: `${Math.min(index, 8) * 0.04}s` }}>
       <span className="test-topic"><span aria-hidden="true">{subjectEmoji(t.subject)}</span> {t.subject}</span>
+      {draft && <span className="badge badge-pending test-draft-badge">{t.question_count === 0 ? 'No questions yet' : 'Draft — only admins see this'}</span>}
       <h3>{t.title}</h3>
       {t.description && <p className="muted small clamp">{t.description}</p>}
       <div className="test-meta">
@@ -60,7 +63,7 @@ export function TestCard({ test: t, index = 0 }) {
         <span><ClockIcon size={14} /> {t.duration_min} min</span>
         {t.best_pct !== null && <span className={`score-pill ${t.best_pct >= 50 ? 'pass' : 'fail'}`}>Best {t.best_pct}%</span>}
       </div>
-      <span className="test-go">{t.best_pct !== null ? 'Retake →' : 'Start →'}</span>
+      <span className="test-go">{draft ? 'Edit & publish →' : t.best_pct !== null ? 'Retake →' : 'Start →'}</span>
     </Link>
   );
 }
@@ -115,6 +118,31 @@ export function TestList() {
         document.body,
       )}
       {creating && <CreateTestModal onClose={() => setCreating(false)} />}
+    </div>
+  );
+}
+
+export function Toppers({ testId, refreshKey = 0, highlight }) {
+  const { data } = useApi(`/tests/${testId}/toppers?k=${refreshKey}`);
+  if (!data) return null;
+  return (
+    <div className="card toppers">
+      <h3>🏆 Top 10 toppers</h3>
+      {data.length === 0
+        ? <p className="muted small">No one has shared a score yet. Finish the test and be the first on the board!</p>
+        : (
+          <ol className="toppers-list">
+            {data.map((e) => (
+              <li key={e.attempt_id} className={`topper-row ${e.attempt_id === highlight ? 'topper-me' : ''}`}>
+                <span className={`topper-rank rank-${e.rank}`}>{e.rank <= 3 ? ['🥇', '🥈', '🥉'][e.rank - 1] : e.rank}</span>
+                <Avatar user={e.user} size={32} link />
+                <Link to={`/u/${e.user.username}`} className="grow strong clamp">{e.user.full_name || e.user.username}</Link>
+                <span className="muted small">{e.score}/{e.total}</span>
+                <span className={`score-pill ${e.pct >= 50 ? 'pass' : 'fail'}`}>{e.pct}%</span>
+              </li>
+            ))}
+          </ol>
+        )}
     </div>
   );
 }
@@ -205,6 +233,7 @@ export function TakeTest() {
             ? <p className="form-error">This test has no questions yet.</p>
             : <button className="btn btn-primary btn-glow" onClick={() => { setLeft(test.duration_min * 60); setStarted(true); }}>Start test</button>}
         </div>
+        <Toppers testId={test.id} />
       </div>
     );
   }
@@ -266,28 +295,85 @@ export function TakeTest() {
   );
 }
 
-function verdict(pct) {
-  if (pct >= 80) return { emoji: '🏆', text: 'Excellent!' };
-  if (pct >= 60) return { emoji: '🎉', text: 'Good job!' };
-  if (pct >= 40) return { emoji: '💪', text: 'Nearly there' };
-  return { emoji: '📚', text: 'Keep practising' };
+// Feedback by score band; the attempt id picks one message so it stays the same on reload.
+const FEEDBACK = [
+  { min: 90, emoji: '🏆', text: 'Outstanding!', lines: [
+    'Topper material! This is the kind of preparation that clears NEET MDS.',
+    'Brilliant work — your hours of study are clearly paying off. Keep this rhythm going.',
+    'Near perfect! Now help a friend — teaching is the best way to lock it in.',
+  ] },
+  { min: 75, emoji: '🌟', text: 'Excellent!', lines: [
+    'You really know this subject. Review the few you missed and you will be unstoppable.',
+    'Great score! Consistency like this is what separates rankers from the rest.',
+    'Superb effort — a little polishing and you will be at the top of the board.',
+  ] },
+  { min: 60, emoji: '🎉', text: 'Good job!', lines: [
+    'Solid foundation! Go through the explanations below — every mistake is a lesson learned.',
+    'You are on the right track. One more revision and this score will climb fast.',
+    'Well done! Focus on the topics you missed and retake — you will see the jump.',
+  ] },
+  { min: 40, emoji: '💪', text: 'Nearly there', lines: [
+    'You are closer than you think. Read the explanations, revise, and try again tomorrow.',
+    'Every expert was once a beginner. Keep practising — progress is guaranteed.',
+    'Good start! Small daily revision beats last-minute cramming every time.',
+  ] },
+  { min: 0, emoji: '📚', text: 'Keep going!', lines: [
+    'Every attempt teaches you something. Review the answers below — this is how toppers are made.',
+    'Do not be discouraged — mistakes today mean fewer mistakes in the real exam.',
+    'Success is the sum of small efforts repeated daily. Revise this topic and come back stronger!',
+  ] },
+];
+
+function verdict(pct, seed = 0) {
+  const band = FEEDBACK.find((f) => pct >= f.min);
+  return { emoji: band.emoji, text: band.text, line: band.lines[seed % band.lines.length] };
+}
+
+function ShareScore({ attempt, onChange }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const toggle = async () => {
+    setBusy(true);
+    try {
+      await api.put(`/attempts/${attempt.id}/publish`, { published: !attempt.published });
+      toast(attempt.published ? 'Score removed from the toppers board' : 'Score shared on the toppers board', 'success');
+      onChange(!attempt.published);
+    } catch (e) {
+      toast(e.message, 'error');
+    }
+    setBusy(false);
+  };
+  return (
+    <div className="share-score">
+      <p className="small muted">
+        {attempt.published
+          ? 'Your score is on the toppers board (your best shared score counts).'
+          : 'Want to appear on the toppers board? Only scores you choose to share are shown.'}
+      </p>
+      <button className={`btn ${attempt.published ? '' : 'btn-primary'}`} onClick={toggle} disabled={busy}>
+        {attempt.published ? 'Remove from toppers' : '🏆 Share my score'}
+      </button>
+    </div>
+  );
 }
 
 export function Result() {
   const { id } = useParams();
-  const { data: r, error, loading } = useApi(`/attempts/${id}`);
+  const { data: r, error, loading, setData } = useApi(`/attempts/${id}`);
+  const [boardKey, setBoardKey] = useState(0);
   if (loading) return <div className="narrow"><div className="card skeleton" /></div>;
   if (error) return <div className="empty"><h3>{error.message}</h3></div>;
   const pct = r.total ? Math.round((r.score / r.total) * 100) : 0;
   const skipped = r.questions.filter((q) => !q.chosen).length;
   const wrong = r.total - r.score - skipped;
-  const v = verdict(pct);
+  const v = verdict(pct, r.id);
   return (
     <div className="narrow">
       <div className="card center-card result-card">
         <span className="result-emoji" aria-hidden="true">{v.emoji}</span>
         <div className="score-ring" style={{ '--pct': pct }}><span>{pct}%</span></div>
         <h2>{v.text}</h2>
+        <p className="result-feedback">{v.line}</p>
         <p className="muted">{r.title} · {r.subject}</p>
         <div className="result-stats">
           <span className="rs-right"><b>{r.score}</b> correct</span>
@@ -298,7 +384,9 @@ export function Result() {
           <Link className="btn btn-primary" to={`/tests/${r.test_id}`}>Retake</Link>
           <Link className="btn" to="/tests">All tests</Link>
         </div>
+        {r.mine && <ShareScore attempt={r} onChange={(published) => { setData((d) => ({ ...d, published })); setBoardKey((k) => k + 1); }} />}
       </div>
+      <Toppers testId={r.test_id} refreshKey={boardKey} highlight={r.id} />
       <h2 className="section-title">Review answers</h2>
       {r.questions.map((q, i) => {
         const right = q.chosen === q.correct;

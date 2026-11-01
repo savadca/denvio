@@ -292,6 +292,8 @@ async function init() {
     ALTER TABLE papers ADD COLUMN IF NOT EXISTS course_year TEXT NOT NULL DEFAULT '';
     ALTER TABLE papers ADD COLUMN IF NOT EXISTS predicted INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE exams ADD COLUMN IF NOT EXISTS course_years INTEGER NOT NULL DEFAULT 4;
+    ALTER TABLE attempts ADD COLUMN IF NOT EXISTS published INTEGER NOT NULL DEFAULT 0;
+    CREATE INDEX IF NOT EXISTS attempts_test_published ON attempts (test_id) WHERE published = 1;
     DO $$ BEGIN
       PERFORM pg_advisory_xact_lock(727001);
       IF to_regclass('public.paper_exams') IS NOT NULL THEN

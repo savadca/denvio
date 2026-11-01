@@ -7,19 +7,22 @@ router.param('id', numericId);
 const OPTIONS = ['a', 'b', 'c', 'd'];
 
 router.get('/tests', async (req, res) => {
-  const params = [viewer(req).id];
-  let where = 'WHERE t.published = 1';
+  const v = viewer(req);
+  const isAdmin = v.role === 'admin';
+  const params = [v.id];
+  // Admins also see drafts (flagged in the UI) so a saved-but-unpublished test doesn't seem to vanish.
+  let where = isAdmin ? 'WHERE 1 = 1' : 'WHERE t.published = 1';
   if (req.query.subject) {
     where += ' AND t.subject = ?';
     params.push(String(req.query.subject));
   }
   const rows = await db.prepare(`
-    SELECT t.id, t.title, t.subject, t.description, t.duration_min, t.created_at,
+    SELECT t.id, t.title, t.subject, t.description, t.duration_min, t.created_at, t.published,
       (SELECT COUNT(*) FROM questions q WHERE q.test_id = t.id) AS question_count,
       (SELECT MAX(score * 100 / total) FROM attempts a WHERE a.test_id = t.id AND a.user_id = ? AND total > 0) AS best_pct
     FROM tests t ${where} ORDER BY t.created_at DESC
   `).all(...params);
-  res.json(rows.filter((t) => t.question_count > 0));
+  res.json(isAdmin ? rows : rows.filter((t) => t.question_count > 0));
 });
 
 router.get('/tests/:id', requireAuth, async (req, res) => {
@@ -48,6 +51,36 @@ router.post('/tests/:id/submit', requireAuth, async (req, res) => {
   res.status(201).json({ attempt_id: Number(lastInsertRowid), score, total: questions.length });
 });
 
+// Top 10 for a test: each student's best attempt among the ones they chose to publish.
+router.get('/tests/:id/toppers', async (req, res) => {
+  const rows = await db.prepare(`
+    SELECT * FROM (
+      SELECT DISTINCT ON (a.user_id) a.id, a.score, a.total, a.created_at,
+        u.id AS user_id, u.username, u.full_name, u.avatar
+      FROM attempts a
+      JOIN tests t ON t.id = a.test_id AND t.published = 1
+      JOIN users u ON u.id = a.user_id AND u.status <> 'blocked'
+      WHERE a.test_id = ? AND a.published = 1 AND a.total > 0
+      ORDER BY a.user_id, a.score::float / a.total DESC, a.created_at ASC
+    ) best
+    ORDER BY score::float / total DESC, created_at ASC
+    LIMIT 10
+  `).all(req.params.id);
+  res.json(rows.map((r, i) => ({
+    rank: i + 1, attempt_id: r.id, score: r.score, total: r.total,
+    pct: Math.round((r.score / r.total) * 100), created_at: r.created_at,
+    user: { id: r.user_id, username: r.username, full_name: r.full_name, avatar: r.avatar },
+  })));
+});
+
+router.put('/attempts/:id/publish', requireAuth, async (req, res) => {
+  const a = await db.prepare('SELECT user_id FROM attempts WHERE id = ?').get(req.params.id);
+  if (!a || a.user_id !== req.user.id) return res.status(404).json({ error: 'Result not found' });
+  const published = req.body.published ? 1 : 0;
+  await db.prepare('UPDATE attempts SET published = ? WHERE id = ?').run(published, req.params.id);
+  res.json({ ok: true, published: !!published });
+});
+
 router.get('/attempts/:id', requireAuth, async (req, res) => {
   const a = await db.prepare(`
     SELECT a.*, t.title, t.subject FROM attempts a JOIN tests t ON t.id = a.test_id WHERE a.id = ?
@@ -59,6 +92,7 @@ router.get('/attempts/:id', requireAuth, async (req, res) => {
   res.json({
     id: a.id, test_id: a.test_id, title: a.title, subject: a.subject,
     score: a.score, total: a.total, created_at: a.created_at, questions,
+    published: !!a.published, mine: a.user_id === req.user.id,
   });
 });
 

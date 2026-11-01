@@ -45,7 +45,23 @@ export default function TestEditor() {
   return (
     <div className="narrow">
       <Link to="/admin?tab=tests" className="link-btn back">← All tests</Link>
-      <form className="card form" onSubmit={(e) => { e.preventDefault(); run(() => api.put(`/admin/tests/${id}`, meta), 'Test saved'); }}>
+      {!test.published && (
+        <div className="card draft-banner">
+          <div className="grow">
+            <strong>This test is a draft</strong>
+            <p className="muted small">
+              {test.questions.length
+                ? 'Students can’t see it on the Mock tests page until you publish it.'
+                : 'Add at least one question below, then publish it so students can see it.'}
+            </p>
+          </div>
+          <button type="button" className="btn btn-primary" disabled={!test.questions.length}
+            onClick={() => run(() => api.put(`/admin/tests/${id}`, { ...meta, published: true }), 'Published — students can now take this test')}>
+            Publish test
+          </button>
+        </div>
+      )}
+      <form className="card form" onSubmit={(e) => { e.preventDefault(); run(() => api.put(`/admin/tests/${id}`, meta), test.published ? 'Test saved' : 'Saved — still a draft. Publish it so students can see it.'); }}>
         <div className="row gap wrap">
           <h2 className="grow">Edit test</h2>
           <label className="switch">

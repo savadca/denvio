@@ -1426,3 +1426,19 @@ body:has(.ann-bell) .fab { bottom: 92px; }
 .predicted-chip:hover { background: rgba(255, 255, 255, .3); }
 @keyframes predicted-pulse { 50% { box-shadow: 0 0 0 6px rgba(255, 255, 255, .12); } }
 .tab-dot { width: 8px; height: 8px; border-radius: 50%; background: #ec4899; box-shadow: 0 0 0 3px rgba(236, 72, 153, .25); }
+
+/* Mock tests: drafts, toppers board, result feedback */
+.test-draft { opacity: .85; border-style: dashed; }
+.test-draft-badge { margin: 4px 0 0; align-self: flex-start; }
+.draft-banner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border-left: 4px solid #f59e0b; }
+.draft-banner p { margin: 2px 0 0; }
+.result-feedback { max-width: 420px; margin: 4px auto 8px; font-size: 15px; line-height: 1.5; }
+.share-score { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border, rgba(127,127,127,.2)); display: grid; gap: 8px; justify-items: center; }
+.share-score p { margin: 0; }
+.toppers { margin-top: 16px; }
+.toppers h3 { margin: 0 0 10px; }
+.toppers-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.topper-row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 12px; min-width: 0; }
+.topper-row a.grow { min-width: 0; color: inherit; text-decoration: none; }
+.topper-me { background: rgba(245, 158, 11, .14); }
+.topper-rank { width: 28px; text-align: center; font-weight: 800; font-size: 15px; flex-shrink: 0; }
