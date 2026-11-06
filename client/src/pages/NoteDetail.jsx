@@ -24,12 +24,15 @@ export default function NoteDetail() {
           <button className="btn btn-primary" onClick={() => promptLogin('Sign up for free to view and download notes.')}>Sign up</button>
         </div>
       )}
-      {user && note.has_file && kind === 'PDF' && (
+      {user && note.has_file && (kind === 'PDF' || kind === 'Drive') && (
         <div className="card pdf-view">
           <iframe src={`/api/notes/${note.id}/file`} title={note.title} />
         </div>
       )}
-      {user && note.has_file && kind !== 'image' && kind !== 'PDF' && (
+      {user && kind === 'Drive' && (
+        <p className="muted center small">Hosted on Google Drive — use the download button to save it. Large files may show a Google “can’t scan for viruses” page; choose “Download anyway”.</p>
+      )}
+      {user && note.has_file && !['image', 'PDF', 'Drive'].includes(kind) && (
         <p className="muted center small">Preview isn’t available for {kind} files — use the download button.</p>
       )}
     </div>

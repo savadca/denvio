@@ -20,6 +20,7 @@ export function initials(subject) {
 }
 
 export function fileKind(mime = '') {
+  if (mime === 'drive') return 'Drive';
   if (mime.startsWith('image/')) return 'image';
   if (mime === 'application/pdf') return 'PDF';
   if (mime.includes('word')) return 'DOC';

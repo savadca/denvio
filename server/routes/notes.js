@@ -7,6 +7,27 @@ const { countTiers } = require('../coins');
 const router = express.Router();
 router.param('id', numericId);
 
+// Large files can be hosted on Google Drive (admins only): the note keeps the share link in
+// file_path with file_mime 'drive', and downloads are redirected to Drive.
+const DRIVE_MIME = 'drive';
+function driveLink(value) {
+  const url = cleanUrl(value);
+  if (!url) return '';
+  const host = new URL(url).hostname;
+  return host === 'drive.google.com' || host === 'docs.google.com' ? url : '';
+}
+function driveFileId(url) {
+  const m = url.match(/\/d\/([\w-]{10,})/) || url.match(/[?&]id=([\w-]{10,})/);
+  return m && !url.includes('/folders/') ? m[1] : null;
+}
+function driveTarget(url, download) {
+  const id = driveFileId(url);
+  if (!id) return url; // folders and other Drive pages open as they are
+  return download
+    ? `https://drive.google.com/uc?export=download&id=${id}`
+    : `https://drive.google.com/file/d/${id}/preview`;
+}
+
 const NOTE_SELECT = `
   SELECT n.*, u.username, u.avatar AS user_avatar, u.full_name AS user_full_name,
     (SELECT COUNT(*) FROM likes l WHERE l.note_id = n.id) AS like_count,
@@ -101,9 +122,14 @@ router.post('/notes', requireAuth, async (req, res) => {
   const video_url = cleanUrl(req.body.video_url);
   const audio_url = cleanUrl(req.body.audio_url);
   const fileUrl = String(req.body.file_url || '');
+  const isAdmin = req.user.role === 'admin';
+  const driveUrl = isAdmin && !fileUrl ? driveLink(req.body.drive_url) : '';
+  if (isAdmin && req.body.drive_url && !fileUrl && !driveUrl) {
+    return res.status(400).json({ error: 'Paste a Google Drive link (drive.google.com or docs.google.com)' });
+  }
   if (!title) return res.status(400).json({ error: 'Title is required' });
   if (!(await isTopic(subject))) return res.status(400).json({ error: 'Choose a subject or exam' });
-  if (!fileUrl && !video_url && !audio_url) return res.status(400).json({ error: 'Attach a file or add a video/audio link' });
+  if (!fileUrl && !driveUrl && !video_url && !audio_url) return res.status(400).json({ error: 'Attach a file or add a video/audio link' });
   if (req.body.video_url && !video_url) return res.status(400).json({ error: 'Video link must start with http:// or https://' });
   if (req.body.audio_url && !audio_url) return res.status(400).json({ error: 'Audio link must start with http:// or https://' });
 
@@ -115,10 +141,11 @@ router.post('/notes', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'The uploaded file could not be verified. Please upload it again.' });
     }
     file = { url: info.url, mime: info.contentType, name: str(req.body.file_name, 200) || info.pathname.split('/').pop() };
+  } else if (driveUrl) {
+    file = { url: driveUrl, mime: DRIVE_MIME, name: str(req.body.file_name, 200) || 'Google Drive file' };
   }
 
   // Admin uploads skip the review queue.
-  const isAdmin = req.user.role === 'admin';
   const { lastInsertRowid } = await db.prepare(`
     INSERT INTO notes (user_id, title, subject, description, file_path, file_name, file_mime,
       video_url, audio_url, video_enabled, audio_enabled, status, reviewed_at)
@@ -148,11 +175,12 @@ async function toggle(table, req, res) {
 router.get('/notes/:id/file', requireAuth, async (req, res) => {
   const n = await db.prepare('SELECT * FROM notes WHERE id = ?').get(req.params.id);
   if (!n || !n.file_path || !canView(n, req.user)) return res.status(404).json({ error: 'File not found' });
+  const drive = n.file_mime === DRIVE_MIME;
   if (req.query.download === '1') {
     await db.prepare('UPDATE notes SET downloads = downloads + 1 WHERE id = ?').run(n.id);
-    return res.redirect(302, `${n.file_path}?download=1`);
+    return res.redirect(302, drive ? driveTarget(n.file_path, true) : `${n.file_path}?download=1`);
   }
-  res.redirect(302, n.file_path);
+  res.redirect(302, drive ? driveTarget(n.file_path, false) : n.file_path);
 });
 
 router.delete('/notes/:id', requireAuth, async (req, res) => {

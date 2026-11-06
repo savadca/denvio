@@ -7,7 +7,7 @@ import { uploadFile, addFiles, fileSize, FILE_ACCEPT, MAX_FILE_MB } from '../upl
 import Modal from './Modal';
 import { UploadIcon, CheckIcon, XIcon, FileIcon } from './Icons';
 
-const blank = (subject = '') => ({ title: '', subject, description: '', video_url: '', audio_url: '' });
+const blank = (subject = '') => ({ title: '', subject, description: '', video_url: '', audio_url: '', drive_url: '' });
 
 // Picked files plus a per-file title; several files become several notes that share
 // the subject and description.
@@ -62,6 +62,7 @@ export default function UploadNotesModal({ open, onClose, defaultSubject = '', o
   const [progress, setProgress] = useState(null); // { index, percent }
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   const multi = files.length > 1;
+  const isAdmin = user?.role === 'admin';
 
   const reset = () => {
     setForm(blank(defaultSubject));
@@ -85,8 +86,9 @@ export default function UploadNotesModal({ open, onClose, defaultSubject = '', o
     let remaining = files;
     try {
       if (!files.length) {
-        // Link-only note (video/audio, no file).
-        status = (await api.post('/notes', form)).status;
+        // Link-only note (Google Drive file, or video/audio, no upload).
+        const body = isAdmin && form.drive_url ? { ...form, file_name: form.title } : { ...form, drive_url: '' };
+        status = (await api.post('/notes', body)).status;
         saved = 1;
       }
       for (let i = 0; i < files.length; i++) {
@@ -171,6 +173,14 @@ export default function UploadNotesModal({ open, onClose, defaultSubject = '', o
             </select>
           </label>
           <label>Description<textarea rows={2} value={form.description} onChange={set('description')} placeholder={multi ? 'Shared by all these notes — topic, source…' : 'What does this cover? Year, topic, source…'} maxLength={2000} /></label>
+
+          {isAdmin && !files.length && (
+            <details className="fieldset media-details" open={!!form.drive_url}>
+              <summary>Large file? Use a Google Drive link (admin)</summary>
+              <label>Google Drive link<input type="url" value={form.drive_url} onChange={set('drive_url')} placeholder="https://drive.google.com/file/d/…/view" /></label>
+              <p className="muted small">Upload the file to Google Drive, set sharing to <b>“Anyone with the link”</b>, and paste the link here. No size limit — signed-in users preview and download it from Drive.</p>
+            </details>
+          )}
 
           {!multi && (
             <details className="fieldset media-details">
